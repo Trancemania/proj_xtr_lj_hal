@@ -20,7 +20,6 @@
 /* Includes ------------------------------------------------------------------*/
 #include "main.h"
 #include "cmsis_os.h"
-#include "lwip.h"
 
 /* Private includes ----------------------------------------------------------*/
 /* USER CODE BEGIN Includes */
@@ -42,6 +41,8 @@
 /* USER CODE END PM */
 
 /* Private variables ---------------------------------------------------------*/
+ETH_HandleTypeDef heth;
+
 TIM_HandleTypeDef htim3;
 
 UART_HandleTypeDef huart4;
@@ -64,6 +65,13 @@ const osThreadAttr_t defaultTask_attributes = {
   .priority = (osPriority_t) osPriorityNormal,
   .stack_size = 128 * 4
 };
+/* Definitions for Blink */
+osThreadId_t BlinkHandle;
+const osThreadAttr_t Blink_attributes = {
+  .name = "Blink",
+  .priority = (osPriority_t) osPriorityLow,
+  .stack_size = 128 * 4
+};
 /* USER CODE BEGIN PV */
 
 /* USER CODE END PV */
@@ -77,7 +85,9 @@ static void MX_USART1_UART_Init(void);
 static void MX_USART2_UART_Init(void);
 static void MX_USART3_UART_Init(void);
 static void MX_TIM3_Init(void);
+static void MX_ETH_Init(void);
 void StartDefaultTask(void *argument);
+void StartBlink(void *argument);
 
 /* USER CODE BEGIN PFP */
 
@@ -122,6 +132,7 @@ int main(void)
   MX_USART2_UART_Init();
   MX_USART3_UART_Init();
   MX_TIM3_Init();
+//  MX_ETH_Init();
   /* USER CODE BEGIN 2 */
 
   /* USER CODE END 2 */
@@ -148,6 +159,9 @@ int main(void)
   /* Create the thread(s) */
   /* creation of defaultTask */
   defaultTaskHandle = osThreadNew(StartDefaultTask, NULL, &defaultTask_attributes);
+
+  /* creation of Blink */
+  BlinkHandle = osThreadNew(StartBlink, NULL, &Blink_attributes);
 
   /* USER CODE BEGIN RTOS_THREADS */
   /* add threads, ... */
@@ -209,6 +223,48 @@ void SystemClock_Config(void)
   {
     Error_Handler();
   }
+}
+
+/**
+  * @brief ETH Initialization Function
+  * @param None
+  * @retval None
+  */
+static void MX_ETH_Init(void)
+{
+
+  /* USER CODE BEGIN ETH_Init 0 */
+
+  /* USER CODE END ETH_Init 0 */
+
+  /* USER CODE BEGIN ETH_Init 1 */
+
+  /* USER CODE END ETH_Init 1 */
+  heth.Instance = ETH;
+  heth.Init.AutoNegotiation = ETH_AUTONEGOTIATION_ENABLE;
+  heth.Init.PhyAddress = LAN8742A_PHY_ADDRESS;
+  heth.Init.MACAddr[0] =   0x00;
+  heth.Init.MACAddr[1] =   0x80;
+  heth.Init.MACAddr[2] =   0xE1;
+  heth.Init.MACAddr[3] =   0x00;
+  heth.Init.MACAddr[4] =   0x00;
+  heth.Init.MACAddr[5] =   0x00;
+  heth.Init.RxMode = ETH_RXPOLLING_MODE;
+  heth.Init.ChecksumMode = ETH_CHECKSUM_BY_HARDWARE;
+  heth.Init.MediaInterface = ETH_MEDIA_INTERFACE_RMII;
+
+  /* USER CODE BEGIN MACADDRESS */
+
+  /* USER CODE END MACADDRESS */
+
+  if (HAL_ETH_Init(&heth) != HAL_OK)
+  {
+    Error_Handler();
+  }
+  /* USER CODE BEGIN ETH_Init 2 */
+
+  /* USER CODE END ETH_Init 2 */
+
 }
 
 /**
@@ -504,8 +560,6 @@ static void MX_GPIO_Init(void)
 /* USER CODE END Header_StartDefaultTask */
 void StartDefaultTask(void *argument)
 {
-  /* init code for LWIP */
-  MX_LWIP_Init();
   /* USER CODE BEGIN 5 */
   /* Infinite loop */
   for(;;)
@@ -513,6 +567,25 @@ void StartDefaultTask(void *argument)
     osDelay(1);
   }
   /* USER CODE END 5 */
+}
+
+/* USER CODE BEGIN Header_StartBlink */
+/**
+* @brief Function implementing the Blink thread.
+* @param argument: Not used
+* @retval None
+*/
+/* USER CODE END Header_StartBlink */
+void StartBlink(void *argument)
+{
+  /* USER CODE BEGIN StartBlink */
+  /* Infinite loop */
+  for(;;)
+  {
+    osDelay(250);
+		HAL_GPIO_TogglePin(GPIOD, LD4_Pin);
+  }
+  /* USER CODE END StartBlink */
 }
 
 /**
