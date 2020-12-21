@@ -72,6 +72,13 @@ const osThreadAttr_t Blink_attributes = {
   .priority = (osPriority_t) osPriorityLow,
   .stack_size = 128 * 4
 };
+/* Definitions for KeepState */
+osThreadId_t KeepStateHandle;
+const osThreadAttr_t KeepState_attributes = {
+  .name = "KeepState",
+  .priority = (osPriority_t) osPriorityLow,
+  .stack_size = 128 * 4
+};
 /* USER CODE BEGIN PV */
 
 /* USER CODE END PV */
@@ -88,6 +95,7 @@ static void MX_TIM3_Init(void);
 static void MX_ETH_Init(void);
 void StartDefaultTask(void *argument);
 void StartBlink(void *argument);
+void StartKeepState(void *argument);
 
 /* USER CODE BEGIN PFP */
 
@@ -132,7 +140,7 @@ int main(void)
   MX_USART2_UART_Init();
   MX_USART3_UART_Init();
   MX_TIM3_Init();
-//  MX_ETH_Init();
+  MX_ETH_Init();
   /* USER CODE BEGIN 2 */
 
   /* USER CODE END 2 */
@@ -162,6 +170,9 @@ int main(void)
 
   /* creation of Blink */
   BlinkHandle = osThreadNew(StartBlink, NULL, &Blink_attributes);
+
+  /* creation of KeepState */
+  KeepStateHandle = osThreadNew(StartKeepState, NULL, &KeepState_attributes);
 
   /* USER CODE BEGIN RTOS_THREADS */
   /* add threads, ... */
@@ -313,7 +324,7 @@ static void MX_TIM3_Init(void)
   }
   sConfigOC.OCMode = TIM_OCMODE_PWM1;
   sConfigOC.Pulse = 0;
-  sConfigOC.OCPolarity = TIM_OCPOLARITY_HIGH;
+  sConfigOC.OCPolarity = TIM_OCPOLARITY_LOW;
   sConfigOC.OCFastMode = TIM_OCFAST_DISABLE;
   if (HAL_TIM_PWM_ConfigChannel(&htim3, &sConfigOC, TIM_CHANNEL_1) != HAL_OK)
   {
@@ -514,17 +525,26 @@ static void MX_GPIO_Init(void)
   __HAL_RCC_GPIOD_CLK_ENABLE();
 
   /*Configure GPIO pin Output Level */
-  HAL_GPIO_WritePin(ETH_NRST_GPIO_Port, ETH_NRST_Pin, GPIO_PIN_SET);
+  HAL_GPIO_WritePin(GPIOE, ETH_NRST_Pin|DO7_Pin|DO9_Pin|DO10_Pin
+                          |DO5_Pin|DO0_Pin|DO12_Pin|DO11_Pin, GPIO_PIN_SET);
+
+  /*Configure GPIO pin Output Level */
+  HAL_GPIO_WritePin(GPIOA, DO1_Pin|DO2_Pin|DO3_Pin|DO6_Pin, GPIO_PIN_SET);
+
+  /*Configure GPIO pin Output Level */
+  HAL_GPIO_WritePin(DO4_GPIO_Port, DO4_Pin, GPIO_PIN_SET);
 
   /*Configure GPIO pin Output Level */
   HAL_GPIO_WritePin(GPIOD, LD4_Pin|LD3_Pin|LD5_Pin|LD6_Pin, GPIO_PIN_RESET);
 
-  /*Configure GPIO pin : ETH_NRST_Pin */
-  GPIO_InitStruct.Pin = ETH_NRST_Pin;
+  /*Configure GPIO pins : ETH_NRST_Pin DO7_Pin DO9_Pin DO10_Pin
+                           DO5_Pin DO0_Pin DO12_Pin DO11_Pin */
+  GPIO_InitStruct.Pin = ETH_NRST_Pin|DO7_Pin|DO9_Pin|DO10_Pin
+                          |DO5_Pin|DO0_Pin|DO12_Pin|DO11_Pin;
   GPIO_InitStruct.Mode = GPIO_MODE_OUTPUT_PP;
   GPIO_InitStruct.Pull = GPIO_NOPULL;
   GPIO_InitStruct.Speed = GPIO_SPEED_FREQ_LOW;
-  HAL_GPIO_Init(ETH_NRST_GPIO_Port, &GPIO_InitStruct);
+  HAL_GPIO_Init(GPIOE, &GPIO_InitStruct);
 
   /*Configure GPIO pin : B1_Pin */
   GPIO_InitStruct.Pin = B1_Pin;
@@ -532,22 +552,70 @@ static void MX_GPIO_Init(void)
   GPIO_InitStruct.Pull = GPIO_NOPULL;
   HAL_GPIO_Init(B1_GPIO_Port, &GPIO_InitStruct);
 
+  /*Configure GPIO pins : DO1_Pin DO2_Pin DO3_Pin DO6_Pin */
+  GPIO_InitStruct.Pin = DO1_Pin|DO2_Pin|DO3_Pin|DO6_Pin;
+  GPIO_InitStruct.Mode = GPIO_MODE_OUTPUT_PP;
+  GPIO_InitStruct.Pull = GPIO_NOPULL;
+  GPIO_InitStruct.Speed = GPIO_SPEED_FREQ_LOW;
+  HAL_GPIO_Init(GPIOA, &GPIO_InitStruct);
+
   /*Configure GPIO pin : BOOT1_Pin */
   GPIO_InitStruct.Pin = BOOT1_Pin;
   GPIO_InitStruct.Mode = GPIO_MODE_INPUT;
   GPIO_InitStruct.Pull = GPIO_NOPULL;
   HAL_GPIO_Init(BOOT1_GPIO_Port, &GPIO_InitStruct);
 
-  /*Configure GPIO pins : LD4_Pin LD3_Pin LD5_Pin LD6_Pin */
-  GPIO_InitStruct.Pin = LD4_Pin|LD3_Pin|LD5_Pin|LD6_Pin;
+  /*Configure GPIO pins : DO4_Pin LD4_Pin LD3_Pin LD5_Pin
+                           LD6_Pin */
+  GPIO_InitStruct.Pin = DO4_Pin|LD4_Pin|LD3_Pin|LD5_Pin
+                          |LD6_Pin;
   GPIO_InitStruct.Mode = GPIO_MODE_OUTPUT_PP;
   GPIO_InitStruct.Pull = GPIO_NOPULL;
   GPIO_InitStruct.Speed = GPIO_SPEED_FREQ_LOW;
   HAL_GPIO_Init(GPIOD, &GPIO_InitStruct);
 
+  /*Configure GPIO pins : DI0_Pin DI1_Pin DI2_Pin DI3_Pin */
+  GPIO_InitStruct.Pin = DI0_Pin|DI1_Pin|DI2_Pin|DI3_Pin;
+  GPIO_InitStruct.Mode = GPIO_MODE_IT_RISING_FALLING;
+  GPIO_InitStruct.Pull = GPIO_PULLDOWN;
+  HAL_GPIO_Init(GPIOD, &GPIO_InitStruct);
+
+  /*Configure GPIO pins : DI5_Pin DI6_Pin DI7_Pin */
+  GPIO_InitStruct.Pin = DI5_Pin|DI6_Pin|DI7_Pin;
+  GPIO_InitStruct.Mode = GPIO_MODE_IT_RISING_FALLING;
+  GPIO_InitStruct.Pull = GPIO_PULLDOWN;
+  HAL_GPIO_Init(GPIOB, &GPIO_InitStruct);
+
+  /* EXTI interrupt init*/
+  HAL_NVIC_SetPriority(EXTI2_IRQn, 2, 0);
+  HAL_NVIC_EnableIRQ(EXTI2_IRQn);
+
+  HAL_NVIC_SetPriority(EXTI3_IRQn, 2, 0);
+  HAL_NVIC_EnableIRQ(EXTI3_IRQn);
+
+  HAL_NVIC_SetPriority(EXTI4_IRQn, 2, 0);
+  HAL_NVIC_EnableIRQ(EXTI4_IRQn);
+
+  HAL_NVIC_SetPriority(EXTI9_5_IRQn, 2, 0);
+  HAL_NVIC_EnableIRQ(EXTI9_5_IRQn);
+
 }
 
 /* USER CODE BEGIN 4 */
+
+void HAL_GPIO_EXTI_Callback(uint16_t GPIO_Pin)
+{
+  if(GPIO_Pin == GPIO_PIN_2 || GPIO_Pin == GPIO_PIN_3 || GPIO_Pin == GPIO_PIN_4 || GPIO_Pin == GPIO_PIN_5 || GPIO_Pin == GPIO_PIN_7 || GPIO_Pin == GPIO_PIN_8 || GPIO_Pin == GPIO_PIN_9)
+{
+//		if(exti_lock == 0) {
+//			exti_lock = 1;
+//			process_command();
+		HAL_GPIO_TogglePin(GPIOD, LD5_Pin);
+//			exti_lock = 0;
+		}
+		else {
+		}
+}
 
 /* USER CODE END 4 */
 
@@ -586,6 +654,24 @@ void StartBlink(void *argument)
 		HAL_GPIO_TogglePin(GPIOD, LD4_Pin);
   }
   /* USER CODE END StartBlink */
+}
+
+/* USER CODE BEGIN Header_StartKeepState */
+/**
+* @brief Function implementing the KeepState thread.
+* @param argument: Not used
+* @retval None
+*/
+/* USER CODE END Header_StartKeepState */
+void StartKeepState(void *argument)
+{
+  /* USER CODE BEGIN StartKeepState */
+  /* Infinite loop */
+  for(;;)
+  {
+    osDelay(1);
+  }
+  /* USER CODE END StartKeepState */
 }
 
 /**
