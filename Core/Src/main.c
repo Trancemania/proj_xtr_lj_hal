@@ -45,12 +45,9 @@ ETH_HandleTypeDef heth;
 
 TIM_HandleTypeDef htim3;
 
-UART_HandleTypeDef huart4;
 UART_HandleTypeDef huart1;
 UART_HandleTypeDef huart2;
 UART_HandleTypeDef huart3;
-DMA_HandleTypeDef hdma_uart4_rx;
-DMA_HandleTypeDef hdma_uart4_tx;
 DMA_HandleTypeDef hdma_usart1_rx;
 DMA_HandleTypeDef hdma_usart1_tx;
 DMA_HandleTypeDef hdma_usart2_rx;
@@ -81,13 +78,15 @@ const osThreadAttr_t KeepState_attributes = {
 };
 /* USER CODE BEGIN PV */
 
+uint8_t previous_command = 0;
+uint8_t current_command = 0;
+
 /* USER CODE END PV */
 
 /* Private function prototypes -----------------------------------------------*/
 void SystemClock_Config(void);
 static void MX_GPIO_Init(void);
 static void MX_DMA_Init(void);
-static void MX_UART4_Init(void);
 static void MX_USART1_UART_Init(void);
 static void MX_USART2_UART_Init(void);
 static void MX_USART3_UART_Init(void);
@@ -98,6 +97,8 @@ void StartBlink(void *argument);
 void StartKeepState(void *argument);
 
 /* USER CODE BEGIN PFP */
+HAL_StatusTypeDef process_command (void);
+
 
 /* USER CODE END PFP */
 
@@ -135,7 +136,6 @@ int main(void)
   /* Initialize all configured peripherals */
   MX_GPIO_Init();
   MX_DMA_Init();
-  MX_UART4_Init();
   MX_USART1_UART_Init();
   MX_USART2_UART_Init();
   MX_USART3_UART_Init();
@@ -338,39 +338,6 @@ static void MX_TIM3_Init(void)
 }
 
 /**
-  * @brief UART4 Initialization Function
-  * @param None
-  * @retval None
-  */
-static void MX_UART4_Init(void)
-{
-
-  /* USER CODE BEGIN UART4_Init 0 */
-
-  /* USER CODE END UART4_Init 0 */
-
-  /* USER CODE BEGIN UART4_Init 1 */
-
-  /* USER CODE END UART4_Init 1 */
-  huart4.Instance = UART4;
-  huart4.Init.BaudRate = 115200;
-  huart4.Init.WordLength = UART_WORDLENGTH_8B;
-  huart4.Init.StopBits = UART_STOPBITS_1;
-  huart4.Init.Parity = UART_PARITY_NONE;
-  huart4.Init.Mode = UART_MODE_TX_RX;
-  huart4.Init.HwFlowCtl = UART_HWCONTROL_NONE;
-  huart4.Init.OverSampling = UART_OVERSAMPLING_16;
-  if (HAL_UART_Init(&huart4) != HAL_OK)
-  {
-    Error_Handler();
-  }
-  /* USER CODE BEGIN UART4_Init 2 */
-
-  /* USER CODE END UART4_Init 2 */
-
-}
-
-/**
   * @brief USART1 Initialization Function
   * @param None
   * @retval None
@@ -483,15 +450,9 @@ static void MX_DMA_Init(void)
   /* DMA1_Stream1_IRQn interrupt configuration */
   HAL_NVIC_SetPriority(DMA1_Stream1_IRQn, 0, 0);
   HAL_NVIC_EnableIRQ(DMA1_Stream1_IRQn);
-  /* DMA1_Stream2_IRQn interrupt configuration */
-  HAL_NVIC_SetPriority(DMA1_Stream2_IRQn, 0, 0);
-  HAL_NVIC_EnableIRQ(DMA1_Stream2_IRQn);
   /* DMA1_Stream3_IRQn interrupt configuration */
   HAL_NVIC_SetPriority(DMA1_Stream3_IRQn, 0, 0);
   HAL_NVIC_EnableIRQ(DMA1_Stream3_IRQn);
-  /* DMA1_Stream4_IRQn interrupt configuration */
-  HAL_NVIC_SetPriority(DMA1_Stream4_IRQn, 0, 0);
-  HAL_NVIC_EnableIRQ(DMA1_Stream4_IRQn);
   /* DMA1_Stream5_IRQn interrupt configuration */
   HAL_NVIC_SetPriority(DMA1_Stream5_IRQn, 0, 0);
   HAL_NVIC_EnableIRQ(DMA1_Stream5_IRQn);
@@ -546,11 +507,11 @@ static void MX_GPIO_Init(void)
   GPIO_InitStruct.Speed = GPIO_SPEED_FREQ_LOW;
   HAL_GPIO_Init(GPIOE, &GPIO_InitStruct);
 
-  /*Configure GPIO pin : B1_Pin */
-  GPIO_InitStruct.Pin = B1_Pin;
-  GPIO_InitStruct.Mode = GPIO_MODE_EVT_RISING;
-  GPIO_InitStruct.Pull = GPIO_NOPULL;
-  HAL_GPIO_Init(B1_GPIO_Port, &GPIO_InitStruct);
+  /*Configure GPIO pins : DI13_Pin DI8_Pin DI12_Pin DI11_Pin */
+  GPIO_InitStruct.Pin = DI13_Pin|DI8_Pin|DI12_Pin|DI11_Pin;
+  GPIO_InitStruct.Mode = GPIO_MODE_IT_RISING;
+  GPIO_InitStruct.Pull = GPIO_PULLDOWN;
+  HAL_GPIO_Init(GPIOC, &GPIO_InitStruct);
 
   /*Configure GPIO pins : DO1_Pin DO2_Pin DO3_Pin DO6_Pin */
   GPIO_InitStruct.Pin = DO1_Pin|DO2_Pin|DO3_Pin|DO6_Pin;
@@ -574,11 +535,23 @@ static void MX_GPIO_Init(void)
   GPIO_InitStruct.Speed = GPIO_SPEED_FREQ_LOW;
   HAL_GPIO_Init(GPIOD, &GPIO_InitStruct);
 
+  /*Configure GPIO pins : DI10_Pin DI9_Pin */
+  GPIO_InitStruct.Pin = DI10_Pin|DI9_Pin;
+  GPIO_InitStruct.Mode = GPIO_MODE_IT_RISING;
+  GPIO_InitStruct.Pull = GPIO_PULLDOWN;
+  HAL_GPIO_Init(GPIOD, &GPIO_InitStruct);
+
   /*Configure GPIO pins : DI0_Pin DI1_Pin DI2_Pin DI3_Pin */
   GPIO_InitStruct.Pin = DI0_Pin|DI1_Pin|DI2_Pin|DI3_Pin;
   GPIO_InitStruct.Mode = GPIO_MODE_IT_RISING_FALLING;
   GPIO_InitStruct.Pull = GPIO_PULLDOWN;
   HAL_GPIO_Init(GPIOD, &GPIO_InitStruct);
+
+  /*Configure GPIO pin : DI4_Pin */
+  GPIO_InitStruct.Pin = DI4_Pin;
+  GPIO_InitStruct.Mode = GPIO_MODE_INPUT;
+  GPIO_InitStruct.Pull = GPIO_PULLDOWN;
+  HAL_GPIO_Init(DI4_GPIO_Port, &GPIO_InitStruct);
 
   /*Configure GPIO pins : DI5_Pin DI6_Pin DI7_Pin */
   GPIO_InitStruct.Pin = DI5_Pin|DI6_Pin|DI7_Pin;
@@ -587,6 +560,12 @@ static void MX_GPIO_Init(void)
   HAL_GPIO_Init(GPIOB, &GPIO_InitStruct);
 
   /* EXTI interrupt init*/
+  HAL_NVIC_SetPriority(EXTI0_IRQn, 1, 0);
+  HAL_NVIC_EnableIRQ(EXTI0_IRQn);
+
+  HAL_NVIC_SetPriority(EXTI1_IRQn, 1, 0);
+  HAL_NVIC_EnableIRQ(EXTI1_IRQn);
+
   HAL_NVIC_SetPriority(EXTI2_IRQn, 2, 0);
   HAL_NVIC_EnableIRQ(EXTI2_IRQn);
 
@@ -599,6 +578,9 @@ static void MX_GPIO_Init(void)
   HAL_NVIC_SetPriority(EXTI9_5_IRQn, 2, 0);
   HAL_NVIC_EnableIRQ(EXTI9_5_IRQn);
 
+  HAL_NVIC_SetPriority(EXTI15_10_IRQn, 1, 0);
+  HAL_NVIC_EnableIRQ(EXTI15_10_IRQn);
+
 }
 
 /* USER CODE BEGIN 4 */
@@ -606,16 +588,50 @@ static void MX_GPIO_Init(void)
 void HAL_GPIO_EXTI_Callback(uint16_t GPIO_Pin)
 {
   if(GPIO_Pin == GPIO_PIN_2 || GPIO_Pin == GPIO_PIN_3 || GPIO_Pin == GPIO_PIN_4 || GPIO_Pin == GPIO_PIN_5 || GPIO_Pin == GPIO_PIN_7 || GPIO_Pin == GPIO_PIN_8 || GPIO_Pin == GPIO_PIN_9)
-{
+	{
 //		if(exti_lock == 0) {
 //			exti_lock = 1;
 //			process_command();
-		HAL_GPIO_TogglePin(GPIOD, LD5_Pin);
+//		HAL_GPIO_TogglePin(GPIOD, LD5_Pin);
 //			exti_lock = 0;
-		}
-		else {
-		}
+	}
+	else if (GPIO_Pin == GPIO_PIN_0) 
+	{
+	}
+	else if (GPIO_Pin == GPIO_PIN_1) 
+	{
+	}
+	else if (GPIO_Pin == GPIO_PIN_10) 
+	{
+	}
+	else if (GPIO_Pin == GPIO_PIN_11) 
+	{
+	}
+	else if (GPIO_Pin == GPIO_PIN_12) 
+	{
+	}
+	else if (GPIO_Pin == GPIO_PIN_13) 
+	{
+	}
 }
+
+
+
+HAL_StatusTypeDef process_command (void)
+{
+	switch (current_command) {
+		case 0x00:
+			HAL_GPIO_TogglePin(GPIOD, LD6_Pin);
+			return HAL_OK;
+		case 0x01:
+			HAL_GPIO_TogglePin(GPIOD, LD5_Pin);
+			return HAL_OK;
+		default:
+			break;
+	}
+	return HAL_OK;
+}
+
 
 /* USER CODE END 4 */
 
@@ -669,7 +685,23 @@ void StartKeepState(void *argument)
   /* Infinite loop */
   for(;;)
   {
-    osDelay(1);
+		current_command = (HAL_GPIO_ReadPin(GPIOD, GPIO_PIN_2)<<0) |  \
+											(HAL_GPIO_ReadPin(GPIOD, GPIO_PIN_3)<<1) |  \
+										  (HAL_GPIO_ReadPin(GPIOD, GPIO_PIN_4)<<2) |  \
+										  (HAL_GPIO_ReadPin(GPIOD, GPIO_PIN_7)<<3) |  \
+										  (HAL_GPIO_ReadPin(GPIOB, GPIO_PIN_3)<<4) |  \
+										  (HAL_GPIO_ReadPin(GPIOB, GPIO_PIN_5)<<5) |  \
+										  (HAL_GPIO_ReadPin(GPIOB, GPIO_PIN_8)<<6) |  \
+											(HAL_GPIO_ReadPin(GPIOB, GPIO_PIN_9)<<7);
+		if (current_command != previous_command)
+		{
+			previous_command = current_command;
+			if (process_command() != HAL_OK )
+			{
+				Error_Handler();
+			}
+		}
+    osDelay(250);
   }
   /* USER CODE END StartKeepState */
 }
