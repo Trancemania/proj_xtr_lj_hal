@@ -301,7 +301,7 @@ static void MX_TIM3_Init(void)
 	
   /* USER CODE END TIM3_Init 1 */
   htim3.Instance = TIM3;
-  htim3.Init.Prescaler = (SystemCoreClock  / 2 / 10000);
+  htim3.Init.Prescaler = (SystemCoreClock  / 2 / 10000 - 1);
   htim3.Init.CounterMode = TIM_COUNTERMODE_UP;
   htim3.Init.Period = 1333 - 1;
   htim3.Init.ClockDivision = TIM_CLOCKDIVISION_DIV1;
@@ -598,23 +598,48 @@ void HAL_GPIO_EXTI_Callback(uint16_t GPIO_Pin)
 //		HAL_GPIO_TogglePin(GPIOD, LD5_Pin);
 //			exti_lock = 0;
 	}
-	else if (GPIO_Pin == GPIO_PIN_0) 
+	else if (GPIO_Pin == GPIO_PIN_0) //DI10 PD
 	{
+		if(HAL_GPIO_ReadPin(GPIOD, GPIO_PIN_0) == 1)
+		{
+			HAL_GPIO_WritePin(GPIOA, GPIO_PIN_5, GPIO_PIN_RESET);
+		}
 	}
-	else if (GPIO_Pin == GPIO_PIN_1) 
+	else if (GPIO_Pin == GPIO_PIN_1) //DI9	PD
 	{
+		if(HAL_GPIO_ReadPin(GPIOD, GPIO_PIN_1) == 1)
+		{
+			HAL_GPIO_WritePin(GPIOA, GPIO_PIN_3, GPIO_PIN_RESET);
+		}
 	}
-	else if (GPIO_Pin == GPIO_PIN_10) 
+	else if (GPIO_Pin == GPIO_PIN_10) //DI8	PC
 	{
+		if(HAL_GPIO_ReadPin(GPIOC, GPIO_PIN_10) == 1)
+		{
+			HAL_GPIO_WritePin(GPIOE, GPIO_PIN_7, GPIO_PIN_RESET);
+		}
 	}
-	else if (GPIO_Pin == GPIO_PIN_11) 
+	else if (GPIO_Pin == GPIO_PIN_11) //DI12	PC
 	{
+		if(HAL_GPIO_ReadPin(GPIOC, GPIO_PIN_11) == 1)
+		{
+			HAL_GPIO_WritePin(GPIOD, GPIO_PIN_11, GPIO_PIN_RESET);
+		}
 	}
-	else if (GPIO_Pin == GPIO_PIN_12) 
+	else if (GPIO_Pin == GPIO_PIN_12) //DI11	PC
 	{
+		if(HAL_GPIO_ReadPin(GPIOC, GPIO_PIN_12) == 1)
+		{
+			HAL_GPIO_WritePin(GPIOA, GPIO_PIN_8, GPIO_PIN_RESET);
+
+		}
 	}
-	else if (GPIO_Pin == GPIO_PIN_13) 
+	else if (GPIO_Pin == GPIO_PIN_13) //DI13	PC
 	{
+		if(HAL_GPIO_ReadPin(GPIOC, GPIO_PIN_13) == 1)
+		{
+			HAL_GPIO_WritePin(GPIOE, GPIO_PIN_6, GPIO_PIN_RESET);
+		}
 	}
 }
 
@@ -624,14 +649,48 @@ HAL_StatusTypeDef process_command (void)
 {
 	switch (current_command) {
 		case 0x00:
-			HAL_GPIO_TogglePin(GPIOD, LD6_Pin);
-			if(HAL_UART_Transmit_DMA(&huart1, (uint8_t *)&UART_send_buffer, 13) != HAL_OK)
-			{
-			}
+//			HAL_GPIO_TogglePin(GPIOD, LD6_Pin);
+//			if(HAL_UART_Transmit_DMA(&huart1, (uint8_t *)&UART_send_buffer, 13) != HAL_OK)
+//			{
+//			}
+			HAL_GPIO_WritePin(GPIOA, GPIO_PIN_3| GPIO_PIN_5| GPIO_PIN_8| GPIO_PIN_15, GPIO_PIN_SET);
+			HAL_GPIO_WritePin(GPIOD, GPIO_PIN_11, GPIO_PIN_SET);
+			HAL_GPIO_WritePin(GPIOE, GPIO_PIN_0| GPIO_PIN_1| GPIO_PIN_3| GPIO_PIN_4| GPIO_PIN_5| GPIO_PIN_6| GPIO_PIN_7, GPIO_PIN_SET);
+			HAL_TIM_PWM_Stop(&htim3, TIM_CHANNEL_1);
+			__HAL_TIM_SET_COMPARE(&htim3, TIM_CHANNEL_1, 0);
 			return HAL_OK;
+		
+		case 0xff:
+			HAL_GPIO_WritePin(GPIOA, GPIO_PIN_3| GPIO_PIN_5| GPIO_PIN_8| GPIO_PIN_15, GPIO_PIN_SET);
+			HAL_GPIO_WritePin(GPIOD, GPIO_PIN_11, GPIO_PIN_SET);
+			HAL_GPIO_WritePin(GPIOE, GPIO_PIN_0| GPIO_PIN_1| GPIO_PIN_3| GPIO_PIN_4| GPIO_PIN_5| GPIO_PIN_6| GPIO_PIN_7, GPIO_PIN_SET);
+			HAL_TIM_PWM_Stop(&htim3, TIM_CHANNEL_1);
+			__HAL_TIM_SET_COMPARE(&htim3, TIM_CHANNEL_1, 0);
+			return HAL_OK;
+		
 		case 0x01:
-			HAL_GPIO_TogglePin(GPIOD, LD5_Pin);
+			HAL_TIM_PWM_Stop(&htim3, TIM_CHANNEL_1);
+			__HAL_TIM_SET_COMPARE(&htim3, TIM_CHANNEL_1, 0);
+	//				pwm_count = 0;
+				
+				//config DO6/7/9/10/11/12
+			HAL_GPIO_WritePin(GPIOA, GPIO_PIN_15, GPIO_PIN_SET);
+			HAL_GPIO_WritePin(GPIOE, GPIO_PIN_1| GPIO_PIN_3| GPIO_PIN_4, GPIO_PIN_SET);
+			HAL_GPIO_WritePin(GPIOE, GPIO_PIN_0| GPIO_PIN_5, GPIO_PIN_RESET);
 			return HAL_OK;
+		
+		case 0x02:
+			__HAL_TIM_SET_AUTORELOAD(&htim3, 1333 - 1);
+			__HAL_TIM_SET_COMPARE(&htim3, TIM_CHANNEL_1, 100 - 1);
+			HAL_TIM_PWM_Stop(&htim3, TIM_CHANNEL_1);
+	//				pwm_count = 0;
+
+		//config DO6/7/9/10/11/12
+			HAL_GPIO_WritePin(GPIOA, GPIO_PIN_15, GPIO_PIN_SET);
+			HAL_GPIO_WritePin(GPIOE, GPIO_PIN_0| GPIO_PIN_1| GPIO_PIN_3| GPIO_PIN_4, GPIO_PIN_SET);
+			HAL_GPIO_WritePin(GPIOE, GPIO_PIN_5, GPIO_PIN_RESET);
+			return HAL_OK;
+		
 		default:
 			break;
 	}
@@ -707,7 +766,7 @@ void StartKeepState(void *argument)
 				Error_Handler();
 			}
 		}
-    osDelay(250);
+    osDelay(10);
   }
   /* USER CODE END StartKeepState */
 }
