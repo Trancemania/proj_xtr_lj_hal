@@ -81,6 +81,11 @@ const osThreadAttr_t KeepState_attributes = {
 uint8_t previous_command = 0;
 uint8_t current_command = 0;
 uint8_t UART_send_buffer[16];
+uint8_t UART_recv_buffer[16];
+uint8_t ch;
+int uart_recv_cnt = 0;
+xSemaphoreHandle uart_A1_xSemaphore = NULL;
+portBASE_TYPE uart_xHigherPriorityTaskWoken;
 
 /* USER CODE END PV */
 
@@ -155,6 +160,7 @@ int main(void)
 
   /* USER CODE BEGIN RTOS_SEMAPHORES */
   /* add semaphores, ... */
+  vSemaphoreCreateBinary(uart_A1_xSemaphore);
   /* USER CODE END RTOS_SEMAPHORES */
 
   /* USER CODE BEGIN RTOS_TIMERS */
@@ -697,6 +703,63 @@ HAL_StatusTypeDef process_command (void)
 	return HAL_OK;
 }
 
+void HAL_UART_RxCpltCallback(UART_HandleTypeDef *UartHandle)
+{
+	 if(UartHandle->Instance==USART1){
+			HAL_UART_Receive_IT(&huart1, (uint8_t*) &ch, 1); 		//write ch
+			//cnt = 0 of cnt != 0
+		  if (uart_recv_cnt == 0)
+			{
+				if (ch == 0xA6) {
+					UART_recv_buffer[uart_recv_cnt] = ch;
+					uart_recv_cnt++;
+				}
+			}
+			else if (uart_recv_cnt != 0)
+			{
+				UART_recv_buffer[uart_recv_cnt] = ch;
+				uart_recv_cnt++;
+				if (uart_recv_cnt == 13)
+				{
+					if ( UART_recv_buffer[12] == 0x86)
+					{
+						switch ( UART_recv_buffer[2]) {
+							case 0x55:
+								xSemaphoreGiveFromISR( uart_A1_xSemaphore, &uart_xHigherPriorityTaskWoken );
+								uart_recv_cnt = 0;
+								break;
+							case 0x71:
+								switch ( UART_recv_buffer[7]) {
+									case 1:
+	//									xSemaphoreGiveFromISR( uart_A2_xSemaphore, &xHigherPriorityTaskWoken );
+										uart_recv_cnt = 0;
+										break;
+									case 2:
+	//									xSemaphoreGiveFromISR( uart_A3_xSemaphore, &xHigherPriorityTaskWoken );
+										uart_recv_cnt = 0;
+										break;
+									default:
+										uart_recv_cnt = 0;
+										break;
+								}
+								break;
+							default:
+								uart_recv_cnt = 0;
+								break;
+						}
+					}
+					else
+					{
+						uart_recv_cnt = 0;
+					}
+				}
+				else if (uart_recv_cnt > 13)
+				{
+					uart_recv_cnt = 0;
+				}
+			}
+	 }
+}
 
 /* USER CODE END 4 */
 

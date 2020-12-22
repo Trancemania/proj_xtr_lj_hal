@@ -41,3 +41,5 @@ proj_xtr_lj_hal\freertos.o: ../Drivers/STM32F4xx_HAL_Driver/Inc/stm32f4xx_hal_pw
 proj_xtr_lj_hal\freertos.o: ../Drivers/STM32F4xx_HAL_Driver/Inc/stm32f4xx_hal_tim.h
 proj_xtr_lj_hal\freertos.o: ../Drivers/STM32F4xx_HAL_Driver/Inc/stm32f4xx_hal_tim_ex.h
 proj_xtr_lj_hal\freertos.o: ../Drivers/STM32F4xx_HAL_Driver/Inc/stm32f4xx_hal_uart.h
+proj_xtr_lj_hal\freertos.o: ../Middlewares/Third_Party/FreeRTOS/Source/include/semphr.h
+proj_xtr_lj_hal\freertos.o: ../Middlewares/Third_Party/FreeRTOS/Source/include/queue.h
