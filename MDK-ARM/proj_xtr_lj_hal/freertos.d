@@ -1,7 +1,7 @@
 proj_xtr_lj_hal\freertos.o: ../Core/Src/freertos.c
 proj_xtr_lj_hal\freertos.o: ../Middlewares/Third_Party/FreeRTOS/Source/include/FreeRTOS.h
-proj_xtr_lj_hal\freertos.o: D:\Program Files\Keil_v5\ARM\ARMCC\Bin\..\include\stddef.h
-proj_xtr_lj_hal\freertos.o: D:\Program Files\Keil_v5\ARM\ARMCC\Bin\..\include\stdint.h
+proj_xtr_lj_hal\freertos.o: D:\Keil_v5\ARM\ARMCC\Bin\..\include\stddef.h
+proj_xtr_lj_hal\freertos.o: D:\Keil_v5\ARM\ARMCC\Bin\..\include\stdint.h
 proj_xtr_lj_hal\freertos.o: ../Core/Inc/FreeRTOSConfig.h
 proj_xtr_lj_hal\freertos.o: ../Middlewares/Third_Party/FreeRTOS/Source/include/projdefs.h
 proj_xtr_lj_hal\freertos.o: ../Middlewares/Third_Party/FreeRTOS/Source/include/portable.h

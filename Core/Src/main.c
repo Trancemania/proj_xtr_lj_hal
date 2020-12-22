@@ -675,8 +675,8 @@ HAL_StatusTypeDef process_command (void)
 				
 				//config DO6/7/9/10/11/12
 			HAL_GPIO_WritePin(GPIOA, GPIO_PIN_15, GPIO_PIN_SET);
-			HAL_GPIO_WritePin(GPIOE, GPIO_PIN_1| GPIO_PIN_3| GPIO_PIN_4, GPIO_PIN_SET);
-			HAL_GPIO_WritePin(GPIOE, GPIO_PIN_0| GPIO_PIN_5, GPIO_PIN_RESET);
+			HAL_GPIO_WritePin(GPIOE, GPIO_PIN_1| GPIO_PIN_3| GPIO_PIN_4| GPIO_PIN_5, GPIO_PIN_SET);
+			HAL_GPIO_WritePin(GPIOE, GPIO_PIN_0, GPIO_PIN_RESET);
 			return HAL_OK;
 		
 		case 0x02:
@@ -687,10 +687,392 @@ HAL_StatusTypeDef process_command (void)
 
 		//config DO6/7/9/10/11/12
 			HAL_GPIO_WritePin(GPIOA, GPIO_PIN_15, GPIO_PIN_SET);
-			HAL_GPIO_WritePin(GPIOE, GPIO_PIN_0| GPIO_PIN_1| GPIO_PIN_3| GPIO_PIN_4, GPIO_PIN_SET);
-			HAL_GPIO_WritePin(GPIOE, GPIO_PIN_5, GPIO_PIN_RESET);
+			HAL_GPIO_WritePin(GPIOE, GPIO_PIN_0| GPIO_PIN_1| GPIO_PIN_3| GPIO_PIN_4|GPIO_PIN_5, GPIO_PIN_SET);
 			return HAL_OK;
 		
+		case 0x03:
+			__HAL_TIM_SET_AUTORELOAD(&htim3, 1333 - 1);
+			__HAL_TIM_SET_COMPARE(&htim3, TIM_CHANNEL_1, 100 - 1);
+			HAL_TIM_PWM_Stop(&htim3, TIM_CHANNEL_1);
+	//				pwm_count = 0;
+
+		//config DO6/7/9/10/11/12
+			HAL_GPIO_WritePin(GPIOA, GPIO_PIN_15, GPIO_PIN_SET);
+			HAL_GPIO_WritePin(GPIOE, GPIO_PIN_0| GPIO_PIN_4|GPIO_PIN_5, GPIO_PIN_SET);
+			HAL_GPIO_WritePin(GPIOE,  GPIO_PIN_1| GPIO_PIN_3, GPIO_PIN_RESET);
+			return HAL_OK;
+
+		case 0x04:
+			__HAL_TIM_SET_AUTORELOAD(&htim3, 1333 - 1);
+			__HAL_TIM_SET_COMPARE(&htim3, TIM_CHANNEL_1, 100 - 1);
+			HAL_TIM_PWM_Stop(&htim3, TIM_CHANNEL_1);
+	//				pwm_count = 0;
+
+		//config DO6/7/9/10/11/12
+			HAL_GPIO_WritePin(GPIOA, GPIO_PIN_15, GPIO_PIN_SET);
+			HAL_GPIO_WritePin(GPIOE, GPIO_PIN_0|  GPIO_PIN_3|GPIO_PIN_4|GPIO_PIN_5, GPIO_PIN_SET);
+			HAL_GPIO_WritePin(GPIOE,  GPIO_PIN_1, GPIO_PIN_RESET);
+			return HAL_OK;
+
+		case 0x05:
+			__HAL_TIM_SET_AUTORELOAD(&htim3, 1333 - 1);
+			__HAL_TIM_SET_COMPARE(&htim3, TIM_CHANNEL_1, 100 - 1);
+			HAL_TIM_PWM_Stop(&htim3, TIM_CHANNEL_1);
+	//				pwm_count = 0;
+
+		//config DO6/7/9/10/11/12
+			HAL_GPIO_WritePin(GPIOA, GPIO_PIN_15, GPIO_PIN_SET);
+			HAL_GPIO_WritePin(GPIOE, GPIO_PIN_0|  GPIO_PIN_3|GPIO_PIN_5, GPIO_PIN_SET);
+			HAL_GPIO_WritePin(GPIOE,  GPIO_PIN_1|GPIO_PIN_4, GPIO_PIN_RESET);
+			return HAL_OK;	
+
+		case 0x06:
+			__HAL_TIM_SET_AUTORELOAD(&htim3, 1500 - 1);
+			__HAL_TIM_SET_COMPARE(&htim3, TIM_CHANNEL_1, 100 - 1);
+			HAL_TIM_PWM_Stop(&htim3, TIM_CHANNEL_1);
+	//				pwm_count = 0;
+
+		//config DO6/7/9/10/11/12
+			HAL_GPIO_WritePin(GPIOA, GPIO_PIN_15, GPIO_PIN_SET);
+			HAL_GPIO_WritePin(GPIOE, GPIO_PIN_0|  GPIO_PIN_4|GPIO_PIN_5, GPIO_PIN_SET);
+			HAL_GPIO_WritePin(GPIOE,  GPIO_PIN_1|GPIO_PIN_3, GPIO_PIN_RESET);
+			return HAL_OK;	
+
+		case 0x07:
+			__HAL_TIM_SET_AUTORELOAD(&htim3, 1500 - 1);
+			__HAL_TIM_SET_COMPARE(&htim3, TIM_CHANNEL_1, 100 - 1);
+			HAL_TIM_PWM_Stop(&htim3, TIM_CHANNEL_1);
+	//				pwm_count = 0;
+
+		//config DO6/7/9/10/11/12
+			HAL_GPIO_WritePin(GPIOA, GPIO_PIN_15, GPIO_PIN_SET);
+			HAL_GPIO_WritePin(GPIOE, GPIO_PIN_0|  GPIO_PIN_4|GPIO_PIN_5, GPIO_PIN_SET);
+			HAL_GPIO_WritePin(GPIOE,  GPIO_PIN_1|GPIO_PIN_3, GPIO_PIN_RESET);
+			return HAL_OK;
+
+		case 0x08:
+			__HAL_TIM_SET_AUTORELOAD(&htim3, 1500 - 1);
+			__HAL_TIM_SET_COMPARE(&htim3, TIM_CHANNEL_1, 100 - 1);
+			HAL_TIM_PWM_Stop(&htim3, TIM_CHANNEL_1);
+	//				pwm_count = 0;
+
+		//config DO6/7/9/10/11/12
+			HAL_GPIO_WritePin(GPIOA, GPIO_PIN_15, GPIO_PIN_SET);
+			HAL_GPIO_WritePin(GPIOE, GPIO_PIN_0|  GPIO_PIN_4|GPIO_PIN_5, GPIO_PIN_SET);
+			HAL_GPIO_WritePin(GPIOE,  GPIO_PIN_1|GPIO_PIN_3, GPIO_PIN_RESET);
+			return HAL_OK;	
+
+		case 0x09:
+			__HAL_TIM_SET_AUTORELOAD(&htim3, 1500 - 1);
+			__HAL_TIM_SET_COMPARE(&htim3, TIM_CHANNEL_1, 100 - 1);
+			HAL_TIM_PWM_Stop(&htim3, TIM_CHANNEL_1);
+	//				pwm_count = 0;
+
+		//config DO6/7/9/10/11/12
+			HAL_GPIO_WritePin(GPIOA, GPIO_PIN_15, GPIO_PIN_SET);
+			HAL_GPIO_WritePin(GPIOE, GPIO_PIN_0|  GPIO_PIN_4|GPIO_PIN_5, GPIO_PIN_SET);
+			HAL_GPIO_WritePin(GPIOE,  GPIO_PIN_1|GPIO_PIN_3, GPIO_PIN_RESET);
+			return HAL_OK;	
+
+		case 0x0A:
+			__HAL_TIM_SET_AUTORELOAD(&htim3, 1400 - 1);
+			__HAL_TIM_SET_COMPARE(&htim3, TIM_CHANNEL_1, 100 - 1);
+			HAL_TIM_PWM_Stop(&htim3, TIM_CHANNEL_1);
+	//				pwm_count = 0;
+
+		//config DO6/7/9/10/11/12
+			HAL_GPIO_WritePin(GPIOA, GPIO_PIN_15, GPIO_PIN_SET);
+			HAL_GPIO_WritePin(GPIOE, GPIO_PIN_0| GPIO_PIN_3 |GPIO_PIN_4|GPIO_PIN_5, GPIO_PIN_SET);
+			HAL_GPIO_WritePin(GPIOE,  GPIO_PIN_1, GPIO_PIN_RESET);
+			return HAL_OK;		
+
+		case 0x0B:
+			__HAL_TIM_SET_AUTORELOAD(&htim3, 1400 - 1);
+			__HAL_TIM_SET_COMPARE(&htim3, TIM_CHANNEL_1, 100 - 1);
+			HAL_TIM_PWM_Stop(&htim3, TIM_CHANNEL_1);
+	//				pwm_count = 0;
+
+		//config DO6/7/9/10/11/12
+			HAL_GPIO_WritePin(GPIOA, GPIO_PIN_15, GPIO_PIN_SET);
+			HAL_GPIO_WritePin(GPIOE, GPIO_PIN_0| GPIO_PIN_3 |GPIO_PIN_4|GPIO_PIN_5, GPIO_PIN_SET);
+			HAL_GPIO_WritePin(GPIOE,  GPIO_PIN_1, GPIO_PIN_RESET);
+			return HAL_OK;		
+
+		case 0x0C:
+			__HAL_TIM_SET_AUTORELOAD(&htim3, 1400 - 1);
+			__HAL_TIM_SET_COMPARE(&htim3, TIM_CHANNEL_1, 100 - 1);
+			HAL_TIM_PWM_Stop(&htim3, TIM_CHANNEL_1);
+	//				pwm_count = 0;
+
+		//config DO6/7/9/10/11/12
+			HAL_GPIO_WritePin(GPIOA, GPIO_PIN_15, GPIO_PIN_SET);
+			HAL_GPIO_WritePin(GPIOE, GPIO_PIN_0| GPIO_PIN_3 |GPIO_PIN_4|GPIO_PIN_5, GPIO_PIN_SET);
+			HAL_GPIO_WritePin(GPIOE,  GPIO_PIN_1, GPIO_PIN_RESET);
+			return HAL_OK;			
+
+		case 0x0D:
+			__HAL_TIM_SET_AUTORELOAD(&htim3, 1400 - 1);
+			__HAL_TIM_SET_COMPARE(&htim3, TIM_CHANNEL_1, 100 - 1);
+			HAL_TIM_PWM_Stop(&htim3, TIM_CHANNEL_1);
+	//				pwm_count = 0;
+
+		//config DO6/7/9/10/11/12
+			HAL_GPIO_WritePin(GPIOA, GPIO_PIN_15, GPIO_PIN_SET);
+			HAL_GPIO_WritePin(GPIOE, GPIO_PIN_0| GPIO_PIN_3 |GPIO_PIN_4|GPIO_PIN_5, GPIO_PIN_SET);
+			HAL_GPIO_WritePin(GPIOE,  GPIO_PIN_1, GPIO_PIN_RESET);
+			return HAL_OK;		
+
+		case 0x0E:
+			__HAL_TIM_SET_AUTORELOAD(&htim3, 1000 - 1);
+			__HAL_TIM_SET_COMPARE(&htim3, TIM_CHANNEL_1, 100 - 1);
+			HAL_TIM_PWM_Stop(&htim3, TIM_CHANNEL_1);
+	//				pwm_count = 0;
+
+		//config DO6/7/9/10/11/12
+			HAL_GPIO_WritePin(GPIOA, GPIO_PIN_15, GPIO_PIN_SET);
+			HAL_GPIO_WritePin(GPIOE, GPIO_PIN_0 |GPIO_PIN_4|GPIO_PIN_5, GPIO_PIN_SET);
+			HAL_GPIO_WritePin(GPIOE,  GPIO_PIN_1| GPIO_PIN_3, GPIO_PIN_RESET);
+			return HAL_OK;		
+		
+		case 0x0F:
+			__HAL_TIM_SET_AUTORELOAD(&htim3, 2000 - 1);
+			__HAL_TIM_SET_COMPARE(&htim3, TIM_CHANNEL_1, 100 - 1);
+			HAL_TIM_PWM_Stop(&htim3, TIM_CHANNEL_1);
+	//				pwm_count = 0;
+
+		//config DO6/7/9/10/11/12
+			HAL_GPIO_WritePin(GPIOA, GPIO_PIN_15, GPIO_PIN_SET);
+			HAL_GPIO_WritePin(GPIOE, GPIO_PIN_0 |GPIO_PIN_4|GPIO_PIN_5, GPIO_PIN_SET);
+			HAL_GPIO_WritePin(GPIOE,  GPIO_PIN_1| GPIO_PIN_3, GPIO_PIN_RESET);
+			return HAL_OK;	
+
+		case 0x10:
+			__HAL_TIM_SET_AUTORELOAD(&htim3, 1000 - 1);
+			__HAL_TIM_SET_COMPARE(&htim3, TIM_CHANNEL_1, 100 - 1);
+			HAL_TIM_PWM_Stop(&htim3, TIM_CHANNEL_1);
+	//				pwm_count = 0;
+
+		//config DO6/7/9/10/11/12
+			HAL_GPIO_WritePin(GPIOA, GPIO_PIN_15, GPIO_PIN_SET);
+			HAL_GPIO_WritePin(GPIOE, GPIO_PIN_0| GPIO_PIN_3 |GPIO_PIN_4|GPIO_PIN_5, GPIO_PIN_SET);
+			HAL_GPIO_WritePin(GPIOE,  GPIO_PIN_1, GPIO_PIN_RESET);
+			return HAL_OK;			
+
+		case 0x11:
+			__HAL_TIM_SET_AUTORELOAD(&htim3, 2000 - 1);
+			__HAL_TIM_SET_COMPARE(&htim3, TIM_CHANNEL_1, 100 - 1);
+			HAL_TIM_PWM_Stop(&htim3, TIM_CHANNEL_1);
+	//				pwm_count = 0;
+
+		//config DO6/7/9/10/11/12
+			HAL_GPIO_WritePin(GPIOA, GPIO_PIN_15, GPIO_PIN_SET);
+			HAL_GPIO_WritePin(GPIOE, GPIO_PIN_0| GPIO_PIN_3 |GPIO_PIN_4|GPIO_PIN_5, GPIO_PIN_SET);
+			HAL_GPIO_WritePin(GPIOE,  GPIO_PIN_1, GPIO_PIN_RESET);
+			return HAL_OK;	
+
+		case 0x12:
+			__HAL_TIM_SET_AUTORELOAD(&htim3, 1333- 1);
+			__HAL_TIM_SET_COMPARE(&htim3, TIM_CHANNEL_1, 100 - 1);
+			HAL_TIM_PWM_Stop(&htim3, TIM_CHANNEL_1);
+	//				pwm_count = 0;
+
+		//config DO6/7/9/10/11/12
+			HAL_GPIO_WritePin(GPIOA, GPIO_PIN_15, GPIO_PIN_SET);
+			HAL_GPIO_WritePin(GPIOE, GPIO_PIN_0 |GPIO_PIN_4|GPIO_PIN_5, GPIO_PIN_SET);
+			HAL_GPIO_WritePin(GPIOE,  GPIO_PIN_1| GPIO_PIN_3, GPIO_PIN_RESET);
+			return HAL_OK;		
+		
+		case 0x13:
+			__HAL_TIM_SET_AUTORELOAD(&htim3, 1333 - 1);
+			__HAL_TIM_SET_COMPARE(&htim3, TIM_CHANNEL_1, 100 - 1);
+			HAL_TIM_PWM_Stop(&htim3, TIM_CHANNEL_1);
+	//				pwm_count = 0;
+
+		//config DO6/7/9/10/11/12
+			HAL_GPIO_WritePin(GPIOA, GPIO_PIN_15, GPIO_PIN_SET);
+			HAL_GPIO_WritePin(GPIOE, GPIO_PIN_0 |GPIO_PIN_4|GPIO_PIN_5, GPIO_PIN_SET);
+			HAL_GPIO_WritePin(GPIOE,  GPIO_PIN_1| GPIO_PIN_3, GPIO_PIN_RESET);
+			return HAL_OK;
+
+		case 0x14:
+			__HAL_TIM_SET_AUTORELOAD(&htim3, 1333 - 1);
+			__HAL_TIM_SET_COMPARE(&htim3, TIM_CHANNEL_1, 100 - 1);
+			HAL_TIM_PWM_Stop(&htim3, TIM_CHANNEL_1);
+	//				pwm_count = 0;
+
+		//config DO6/7/9/10/11/12
+			HAL_GPIO_WritePin(GPIOA, GPIO_PIN_15, GPIO_PIN_SET);
+			HAL_GPIO_WritePin(GPIOE, GPIO_PIN_0 |GPIO_PIN_4|GPIO_PIN_5, GPIO_PIN_SET);
+			HAL_GPIO_WritePin(GPIOE,  GPIO_PIN_1| GPIO_PIN_3, GPIO_PIN_RESET);
+			return HAL_OK;		
+		
+		case 0x15:
+			__HAL_TIM_SET_AUTORELOAD(&htim3, 1333 - 1);
+			__HAL_TIM_SET_COMPARE(&htim3, TIM_CHANNEL_1, 100 - 1);
+			HAL_TIM_PWM_Stop(&htim3, TIM_CHANNEL_1);
+	//				pwm_count = 0;
+
+		//config DO6/7/9/10/11/12
+			HAL_GPIO_WritePin(GPIOA, GPIO_PIN_15, GPIO_PIN_SET);
+			HAL_GPIO_WritePin(GPIOE, GPIO_PIN_0 |GPIO_PIN_4|GPIO_PIN_5, GPIO_PIN_SET);
+			HAL_GPIO_WritePin(GPIOE,  GPIO_PIN_1| GPIO_PIN_3, GPIO_PIN_RESET);
+			return HAL_OK;
+
+		case 0x16:
+			__HAL_TIM_SET_AUTORELOAD(&htim3, 1333 - 1);
+			__HAL_TIM_SET_COMPARE(&htim3, TIM_CHANNEL_1, 100 - 1);
+			HAL_TIM_PWM_Stop(&htim3, TIM_CHANNEL_1);
+	//				pwm_count = 0;
+
+		//config DO6/7/9/10/11/12
+			HAL_GPIO_WritePin(GPIOA, GPIO_PIN_15, GPIO_PIN_SET);
+			HAL_GPIO_WritePin(GPIOE, GPIO_PIN_0| GPIO_PIN_3 |GPIO_PIN_4|GPIO_PIN_5, GPIO_PIN_SET);
+			HAL_GPIO_WritePin(GPIOE,  GPIO_PIN_1, GPIO_PIN_RESET);
+			return HAL_OK;			
+
+		case 0x17:
+			__HAL_TIM_SET_AUTORELOAD(&htim3, 1333 - 1);
+			__HAL_TIM_SET_COMPARE(&htim3, TIM_CHANNEL_1, 100 - 1);
+			HAL_TIM_PWM_Stop(&htim3, TIM_CHANNEL_1);
+	//				pwm_count = 0;
+
+		//config DO6/7/9/10/11/12
+			HAL_GPIO_WritePin(GPIOA, GPIO_PIN_15, GPIO_PIN_SET);
+			HAL_GPIO_WritePin(GPIOE, GPIO_PIN_0| GPIO_PIN_3 |GPIO_PIN_4|GPIO_PIN_5, GPIO_PIN_SET);
+			HAL_GPIO_WritePin(GPIOE,  GPIO_PIN_1, GPIO_PIN_RESET);
+			return HAL_OK;
+
+		case 0x18:
+			__HAL_TIM_SET_AUTORELOAD(&htim3, 1333 - 1);
+			__HAL_TIM_SET_COMPARE(&htim3, TIM_CHANNEL_1, 100 - 1);
+			HAL_TIM_PWM_Stop(&htim3, TIM_CHANNEL_1);
+	//				pwm_count = 0;
+
+		//config DO6/7/9/10/11/12
+			HAL_GPIO_WritePin(GPIOA, GPIO_PIN_15, GPIO_PIN_SET);
+			HAL_GPIO_WritePin(GPIOE, GPIO_PIN_0| GPIO_PIN_3 |GPIO_PIN_4|GPIO_PIN_5, GPIO_PIN_SET);
+			HAL_GPIO_WritePin(GPIOE,  GPIO_PIN_1, GPIO_PIN_RESET);
+			return HAL_OK;			
+
+		case 0x19:
+			__HAL_TIM_SET_AUTORELOAD(&htim3, 1333 - 1);
+			__HAL_TIM_SET_COMPARE(&htim3, TIM_CHANNEL_1, 100 - 1);
+			HAL_TIM_PWM_Stop(&htim3, TIM_CHANNEL_1);
+	//				pwm_count = 0;
+
+		//config DO6/7/9/10/11/12
+			HAL_GPIO_WritePin(GPIOA, GPIO_PIN_15, GPIO_PIN_SET);
+			HAL_GPIO_WritePin(GPIOE, GPIO_PIN_0| GPIO_PIN_3 |GPIO_PIN_4|GPIO_PIN_5, GPIO_PIN_SET);
+			HAL_GPIO_WritePin(GPIOE,  GPIO_PIN_1, GPIO_PIN_RESET);
+			return HAL_OK;	
+		
+		case 0x1A:
+			__HAL_TIM_SET_AUTORELOAD(&htim3, 1333 - 1);
+			__HAL_TIM_SET_COMPARE(&htim3, TIM_CHANNEL_1, 100 - 1);
+			HAL_TIM_PWM_Stop(&htim3, TIM_CHANNEL_1);
+	//				pwm_count = 0;
+
+		//config DO6/7/9/10/11/12
+			HAL_GPIO_WritePin(GPIOA, GPIO_PIN_15, GPIO_PIN_SET);
+			HAL_GPIO_WritePin(GPIOE, GPIO_PIN_0 |GPIO_PIN_4|GPIO_PIN_5, GPIO_PIN_SET);
+			HAL_GPIO_WritePin(GPIOE,  GPIO_PIN_1| GPIO_PIN_3, GPIO_PIN_RESET);
+			return HAL_OK;
+
+		case 0x1B:
+			__HAL_TIM_SET_AUTORELOAD(&htim3, 1333 - 1);
+			__HAL_TIM_SET_COMPARE(&htim3, TIM_CHANNEL_1, 100 - 1);
+			HAL_TIM_PWM_Stop(&htim3, TIM_CHANNEL_1);
+	//				pwm_count = 0;
+
+		//config DO6/7/9/10/11/12
+			HAL_GPIO_WritePin(GPIOA, GPIO_PIN_15, GPIO_PIN_SET);
+			HAL_GPIO_WritePin(GPIOE, GPIO_PIN_0| GPIO_PIN_3 |GPIO_PIN_4|GPIO_PIN_5, GPIO_PIN_SET);
+			HAL_GPIO_WritePin(GPIOE,  GPIO_PIN_1, GPIO_PIN_RESET);
+			return HAL_OK;
+	
+		case 0x1D:
+			__HAL_TIM_SET_AUTORELOAD(&htim3, 1400 - 1);
+			__HAL_TIM_SET_COMPARE(&htim3, TIM_CHANNEL_1, 100 - 1);
+			HAL_TIM_PWM_Stop(&htim3, TIM_CHANNEL_1);
+	//				pwm_count = 0;
+
+		//config DO6/7/9/10/11/12
+			HAL_GPIO_WritePin(GPIOA, GPIO_PIN_15, GPIO_PIN_SET);
+			HAL_GPIO_WritePin(GPIOE, GPIO_PIN_0 |GPIO_PIN_4|GPIO_PIN_5, GPIO_PIN_SET);
+			HAL_GPIO_WritePin(GPIOE,  GPIO_PIN_1| GPIO_PIN_3, GPIO_PIN_RESET);
+			return HAL_OK;
+
+		case 0x1F:
+			__HAL_TIM_SET_AUTORELOAD(&htim3, 1400 - 1);
+			__HAL_TIM_SET_COMPARE(&htim3, TIM_CHANNEL_1, 100 - 1);
+			HAL_TIM_PWM_Stop(&htim3, TIM_CHANNEL_1);
+	//				pwm_count = 0;
+
+		//config DO6/7/9/10/11/12
+			HAL_GPIO_WritePin(GPIOA, GPIO_PIN_15, GPIO_PIN_SET);
+			HAL_GPIO_WritePin(GPIOE, GPIO_PIN_0| GPIO_PIN_3 |GPIO_PIN_4|GPIO_PIN_5, GPIO_PIN_SET);
+			HAL_GPIO_WritePin(GPIOE,  GPIO_PIN_1, GPIO_PIN_RESET);
+			return HAL_OK;
+
+		case 0x20:
+			__HAL_TIM_SET_AUTORELOAD(&htim3, 1333 - 1);
+			__HAL_TIM_SET_COMPARE(&htim3, TIM_CHANNEL_1, 0);
+			HAL_TIM_PWM_Stop(&htim3, TIM_CHANNEL_1);
+	//				pwm_count = 0;
+
+		//config DO6/7/9/10/11/12
+			HAL_GPIO_WritePin(GPIOA, GPIO_PIN_15, GPIO_PIN_SET);
+			HAL_GPIO_WritePin(GPIOE,  GPIO_PIN_1|GPIO_PIN_3 , GPIO_PIN_SET);
+			HAL_GPIO_WritePin(GPIOE, GPIO_PIN_0|GPIO_PIN_4|GPIO_PIN_5 , GPIO_PIN_RESET);
+			return HAL_OK;	
+
+		case 0x21:
+			__HAL_TIM_SET_AUTORELOAD(&htim3, 1333 - 1);
+			__HAL_TIM_SET_COMPARE(&htim3, TIM_CHANNEL_1, 0);
+			HAL_TIM_PWM_Stop(&htim3, TIM_CHANNEL_1);
+	//				pwm_count = 0;
+
+		//config DO6/7/9/10/11/12
+			HAL_GPIO_WritePin(GPIOA, GPIO_PIN_15, GPIO_PIN_SET);
+			HAL_GPIO_WritePin(GPIOE, GPIO_PIN_0|GPIO_PIN_3 |GPIO_PIN_4|GPIO_PIN_5 , GPIO_PIN_SET);
+			HAL_GPIO_WritePin(GPIOE, GPIO_PIN_1 , GPIO_PIN_RESET);
+			return HAL_OK;		
+		
+		case 0x22:
+			__HAL_TIM_SET_AUTORELOAD(&htim3, 1333 - 1);
+			__HAL_TIM_SET_COMPARE(&htim3, TIM_CHANNEL_1, 100 - 1);
+			HAL_TIM_PWM_Stop(&htim3, TIM_CHANNEL_1);
+	//				pwm_count = 0;
+
+		//config DO6/7/9/10/11/12
+			HAL_GPIO_WritePin(GPIOA, GPIO_PIN_15, GPIO_PIN_SET);
+			HAL_GPIO_WritePin(GPIOE, GPIO_PIN_1 |GPIO_PIN_3, GPIO_PIN_SET);
+			HAL_GPIO_WritePin(GPIOE,GPIO_PIN_0 |GPIO_PIN_4|GPIO_PIN_5  , GPIO_PIN_RESET);
+			return HAL_OK;
+
+		case 0x23:
+			__HAL_TIM_SET_AUTORELOAD(&htim3, 1333 - 1);
+			__HAL_TIM_SET_COMPARE(&htim3, TIM_CHANNEL_1, 100 - 1);
+			HAL_TIM_PWM_Stop(&htim3, TIM_CHANNEL_1);
+	//				pwm_count = 0;
+
+		//config DO6/7/9/10/11/12
+			HAL_GPIO_WritePin(GPIOA, GPIO_PIN_15, GPIO_PIN_SET);
+			HAL_GPIO_WritePin(GPIOE, GPIO_PIN_0|GPIO_PIN_3 |GPIO_PIN_4|GPIO_PIN_5 , GPIO_PIN_SET);
+			HAL_GPIO_WritePin(GPIOE, GPIO_PIN_1 , GPIO_PIN_RESET);
+			return HAL_OK;
+
+		case 0x24:
+			__HAL_TIM_SET_AUTORELOAD(&htim3, 1333 - 1);
+			__HAL_TIM_SET_COMPARE(&htim3, TIM_CHANNEL_1, 0);
+			HAL_TIM_PWM_Stop(&htim3, TIM_CHANNEL_1);
+	//				pwm_count = 0;
+
+		//config DO6/7/9/10/11/12
+			HAL_GPIO_WritePin(GPIOA, GPIO_PIN_15, GPIO_PIN_SET);
+			HAL_GPIO_WritePin(GPIOE, GPIO_PIN_1|GPIO_PIN_5 , GPIO_PIN_SET);
+			HAL_GPIO_WritePin(GPIOE, GPIO_PIN_0|GPIO_PIN_3 |GPIO_PIN_4 , GPIO_PIN_RESET);
+			return HAL_OK;
 		default:
 			break;
 	}

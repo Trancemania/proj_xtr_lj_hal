@@ -1,8 +1,8 @@
 proj_xtr_lj_hal\cmsis_os2.o: ../Middlewares/Third_Party/FreeRTOS/Source/CMSIS_RTOS_V2/cmsis_os2.c
-proj_xtr_lj_hal\cmsis_os2.o: D:\Program Files\Keil_v5\ARM\ARMCC\Bin\..\include\string.h
+proj_xtr_lj_hal\cmsis_os2.o: D:\Keil_v5\ARM\ARMCC\Bin\..\include\string.h
 proj_xtr_lj_hal\cmsis_os2.o: ../Middlewares/Third_Party/FreeRTOS/Source/CMSIS_RTOS_V2/cmsis_os2.h
-proj_xtr_lj_hal\cmsis_os2.o: D:\Program Files\Keil_v5\ARM\ARMCC\Bin\..\include\stdint.h
-proj_xtr_lj_hal\cmsis_os2.o: D:\Program Files\Keil_v5\ARM\ARMCC\Bin\..\include\stddef.h
+proj_xtr_lj_hal\cmsis_os2.o: D:\Keil_v5\ARM\ARMCC\Bin\..\include\stdint.h
+proj_xtr_lj_hal\cmsis_os2.o: D:\Keil_v5\ARM\ARMCC\Bin\..\include\stddef.h
 proj_xtr_lj_hal\cmsis_os2.o: ../Drivers/CMSIS/Include/cmsis_compiler.h
 proj_xtr_lj_hal\cmsis_os2.o: ../Drivers/CMSIS/Include/cmsis_armcc.h
 proj_xtr_lj_hal\cmsis_os2.o: ../Middlewares/Third_Party/FreeRTOS/Source/include/FreeRTOS.h
