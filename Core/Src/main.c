@@ -80,6 +80,7 @@ const osThreadAttr_t KeepState_attributes = {
 
 uint8_t previous_command = 0;
 uint8_t current_command = 0;
+uint8_t UART_send_buffer[16];
 
 /* USER CODE END PV */
 
@@ -295,12 +296,14 @@ static void MX_TIM3_Init(void)
   TIM_OC_InitTypeDef sConfigOC = {0};
 
   /* USER CODE BEGIN TIM3_Init 1 */
-
+	
+	SystemCoreClockUpdate();
+	
   /* USER CODE END TIM3_Init 1 */
   htim3.Instance = TIM3;
-  htim3.Init.Prescaler = 0;
+  htim3.Init.Prescaler = (SystemCoreClock  / 2 / 10000);
   htim3.Init.CounterMode = TIM_COUNTERMODE_UP;
-  htim3.Init.Period = 65535;
+  htim3.Init.Period = 1333 - 1;
   htim3.Init.ClockDivision = TIM_CLOCKDIVISION_DIV1;
   htim3.Init.AutoReloadPreload = TIM_AUTORELOAD_PRELOAD_DISABLE;
   if (HAL_TIM_Base_Init(&htim3) != HAL_OK)
@@ -622,6 +625,9 @@ HAL_StatusTypeDef process_command (void)
 	switch (current_command) {
 		case 0x00:
 			HAL_GPIO_TogglePin(GPIOD, LD6_Pin);
+			if(HAL_UART_Transmit_DMA(&huart1, (uint8_t *)&UART_send_buffer, 13) != HAL_OK)
+			{
+			}
 			return HAL_OK;
 		case 0x01:
 			HAL_GPIO_TogglePin(GPIOD, LD5_Pin);
