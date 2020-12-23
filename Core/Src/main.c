@@ -25,7 +25,6 @@
 /* USER CODE BEGIN Includes */
 
 /* USER CODE END Includes */
-#define FIELD_TASK_PRIO    ( tskIDLE_PRIORITY + 1 )
 /* Private typedef -----------------------------------------------------------*/
 /* USER CODE BEGIN PTD */
 
@@ -98,7 +97,7 @@ const osThreadAttr_t field_attributes = {
 };
 /* USER CODE END PV */
 
-xTaskHandle field_xHandle = NULL;
+//xTaskHandle field_xHandle = NULL;
 
 
 /* Private function prototypes -----------------------------------------------*/
@@ -684,6 +683,7 @@ HAL_StatusTypeDef process_command (void)
 			HAL_GPIO_WritePin(GPIOE, GPIO_PIN_0| GPIO_PIN_1| GPIO_PIN_3| GPIO_PIN_4| GPIO_PIN_5| GPIO_PIN_6| GPIO_PIN_7, GPIO_PIN_SET);
 			HAL_TIM_PWM_Stop(&htim3, TIM_CHANNEL_1);
 			__HAL_TIM_SET_COMPARE(&htim3, TIM_CHANNEL_1, 0);
+	//				pwm_count = 0;
 			if( FieldHandle != NULL ) {
 				osThreadTerminate( FieldHandle );
 			}
@@ -695,6 +695,7 @@ HAL_StatusTypeDef process_command (void)
 			HAL_GPIO_WritePin(GPIOE, GPIO_PIN_0| GPIO_PIN_1| GPIO_PIN_3| GPIO_PIN_4| GPIO_PIN_5| GPIO_PIN_6| GPIO_PIN_7, GPIO_PIN_SET);
 			HAL_TIM_PWM_Stop(&htim3, TIM_CHANNEL_1);
 			__HAL_TIM_SET_COMPARE(&htim3, TIM_CHANNEL_1, 0);
+	//				pwm_count = 0;
 			if( FieldHandle != NULL ) {
 				osThreadTerminate( FieldHandle );
 			}
@@ -742,7 +743,6 @@ HAL_StatusTypeDef process_command (void)
 					if (xSemaphoreTake( exti_xSemaphore, 10000) == pdTRUE) {
 						time_origin = xTaskGetTickCount() * portTICK_RATE_MS;
 						FieldHandle = osThreadNew(field_task, NULL, &field_attributes);
-//						xTaskCreate(field_task, "FIELD", configMINIMAL_STACK_SIZE * 4, NULL, FIELD_TASK_PRIO, &field_xHandle);
 					}
 					else {
 						//error message
@@ -795,7 +795,6 @@ HAL_StatusTypeDef process_command (void)
 					if (xSemaphoreTake( exti_xSemaphore, 10000) == pdTRUE) {
 						time_origin = xTaskGetTickCount() * portTICK_RATE_MS;
 						FieldHandle = osThreadNew(field_task, NULL, &field_attributes);
-//						xTaskCreate(field_task, "FIELD", configMINIMAL_STACK_SIZE * 4, NULL, FIELD_TASK_PRIO, &field_xHandle);
 					}
 					else {
 						//error message
@@ -848,7 +847,6 @@ HAL_StatusTypeDef process_command (void)
 					if (xSemaphoreTake( exti_xSemaphore, 10000) == pdTRUE) {
 						time_origin = xTaskGetTickCount() * portTICK_RATE_MS;
 						FieldHandle = osThreadNew(field_task, NULL, &field_attributes);
-						xTaskCreate(field_task, "FIELD", configMINIMAL_STACK_SIZE * 4, NULL, FIELD_TASK_PRIO, &field_xHandle);
 					}
 					else {
 						//error message
@@ -901,7 +899,6 @@ HAL_StatusTypeDef process_command (void)
 					if (xSemaphoreTake( exti_xSemaphore, 10000) == pdTRUE) {
 						time_origin = xTaskGetTickCount() * portTICK_RATE_MS;
 						FieldHandle = osThreadNew(field_task, NULL, &field_attributes);
-						xTaskCreate(field_task, "FIELD", configMINIMAL_STACK_SIZE * 4, NULL, FIELD_TASK_PRIO, &field_xHandle);
 					}
 					else {
 						//error message
@@ -955,7 +952,6 @@ HAL_StatusTypeDef process_command (void)
 					if (xSemaphoreTake( exti_xSemaphore, 10000) == pdTRUE) {
 						time_origin = xTaskGetTickCount() * portTICK_RATE_MS;
 						FieldHandle = osThreadNew(field_task, NULL, &field_attributes);
-						xTaskCreate(field_task, "FIELD", configMINIMAL_STACK_SIZE * 4, NULL, FIELD_TASK_PRIO, &field_xHandle);
 					}
 					else {
 						//error message
@@ -1009,7 +1005,6 @@ HAL_StatusTypeDef process_command (void)
 					if (xSemaphoreTake( exti_xSemaphore, 10000) == pdTRUE) {
 						time_origin = xTaskGetTickCount() * portTICK_RATE_MS;
 						FieldHandle = osThreadNew(field_task, NULL, &field_attributes);
-						xTaskCreate(field_task, "FIELD", configMINIMAL_STACK_SIZE * 4, NULL, FIELD_TASK_PRIO, &field_xHandle);
 					}
 					else {
 						//error message
@@ -1063,7 +1058,6 @@ HAL_StatusTypeDef process_command (void)
 					if (xSemaphoreTake( exti_xSemaphore, 10000) == pdTRUE) {
 						time_origin = xTaskGetTickCount() * portTICK_RATE_MS;
 						FieldHandle = osThreadNew(field_task, NULL, &field_attributes);
-						xTaskCreate(field_task, "FIELD", configMINIMAL_STACK_SIZE * 4, NULL, FIELD_TASK_PRIO, &field_xHandle);
 					}
 					else {
 						//error message
@@ -1117,7 +1111,6 @@ HAL_StatusTypeDef process_command (void)
 					if (xSemaphoreTake( exti_xSemaphore, 10000) == pdTRUE) {
 						time_origin = xTaskGetTickCount() * portTICK_RATE_MS;
 						FieldHandle = osThreadNew(field_task, NULL, &field_attributes);
-						xTaskCreate(field_task, "FIELD", configMINIMAL_STACK_SIZE * 4, NULL, FIELD_TASK_PRIO, &field_xHandle);
 					}
 					else {
 						//error message
@@ -1171,7 +1164,6 @@ HAL_StatusTypeDef process_command (void)
 					if (xSemaphoreTake( exti_xSemaphore, 10000) == pdTRUE) {
 						time_origin = xTaskGetTickCount() * portTICK_RATE_MS;
 						FieldHandle = osThreadNew(field_task, NULL, &field_attributes);
-						xTaskCreate(field_task, "FIELD", configMINIMAL_STACK_SIZE * 4, NULL, FIELD_TASK_PRIO, &field_xHandle);
 					}
 					else {
 						//error message
@@ -1225,7 +1217,6 @@ HAL_StatusTypeDef process_command (void)
 					if (xSemaphoreTake( exti_xSemaphore, 10000) == pdTRUE) {
 						time_origin = xTaskGetTickCount() * portTICK_RATE_MS;
 						FieldHandle = osThreadNew(field_task, NULL, &field_attributes);
-						xTaskCreate(field_task, "FIELD", configMINIMAL_STACK_SIZE * 4, NULL, FIELD_TASK_PRIO, &field_xHandle);
 					}
 					else {
 						//error message
@@ -1279,7 +1270,6 @@ HAL_StatusTypeDef process_command (void)
 					if (xSemaphoreTake( exti_xSemaphore, 10000) == pdTRUE) {
 						time_origin = xTaskGetTickCount() * portTICK_RATE_MS;
 						FieldHandle = osThreadNew(field_task, NULL, &field_attributes);
-						xTaskCreate(field_task, "FIELD", configMINIMAL_STACK_SIZE * 4, NULL, FIELD_TASK_PRIO, &field_xHandle);
 					}
 					else {
 						//error message
@@ -1333,7 +1323,6 @@ HAL_StatusTypeDef process_command (void)
 					if (xSemaphoreTake( exti_xSemaphore, 10000) == pdTRUE) {
 						time_origin = xTaskGetTickCount() * portTICK_RATE_MS;
 						FieldHandle = osThreadNew(field_task, NULL, &field_attributes);
-						xTaskCreate(field_task, "FIELD", configMINIMAL_STACK_SIZE * 4, NULL, FIELD_TASK_PRIO, &field_xHandle);
 					}
 					else {
 						//error message
@@ -1387,7 +1376,6 @@ HAL_StatusTypeDef process_command (void)
 					if (xSemaphoreTake( exti_xSemaphore, 10000) == pdTRUE) {
 						time_origin = xTaskGetTickCount() * portTICK_RATE_MS;
 						FieldHandle = osThreadNew(field_task, NULL, &field_attributes);
-						xTaskCreate(field_task, "FIELD", configMINIMAL_STACK_SIZE * 4, NULL, FIELD_TASK_PRIO, &field_xHandle);
 					}
 					else {
 						//error message
@@ -1441,7 +1429,6 @@ HAL_StatusTypeDef process_command (void)
 					if (xSemaphoreTake( exti_xSemaphore, 10000) == pdTRUE) {
 						time_origin = xTaskGetTickCount() * portTICK_RATE_MS;
 						FieldHandle = osThreadNew(field_task, NULL, &field_attributes);
-						xTaskCreate(field_task, "FIELD", configMINIMAL_STACK_SIZE * 4, NULL, FIELD_TASK_PRIO, &field_xHandle);
 					}
 					else {
 						//error message
@@ -1495,7 +1482,6 @@ HAL_StatusTypeDef process_command (void)
 					if (xSemaphoreTake( exti_xSemaphore, 10000) == pdTRUE) {
 						time_origin = xTaskGetTickCount() * portTICK_RATE_MS;
 						FieldHandle = osThreadNew(field_task, NULL, &field_attributes);
-						xTaskCreate(field_task, "FIELD", configMINIMAL_STACK_SIZE * 4, NULL, FIELD_TASK_PRIO, &field_xHandle);
 					}
 					else {
 						//error message
@@ -1549,7 +1535,6 @@ HAL_StatusTypeDef process_command (void)
 					if (xSemaphoreTake( exti_xSemaphore, 10000) == pdTRUE) {
 						time_origin = xTaskGetTickCount() * portTICK_RATE_MS;
 						FieldHandle = osThreadNew(field_task, NULL, &field_attributes);
-						xTaskCreate(field_task, "FIELD", configMINIMAL_STACK_SIZE * 4, NULL, FIELD_TASK_PRIO, &field_xHandle);
 					}
 					else {
 						//error message
@@ -1603,7 +1588,6 @@ HAL_StatusTypeDef process_command (void)
 					if (xSemaphoreTake( exti_xSemaphore, 10000) == pdTRUE) {
 						time_origin = xTaskGetTickCount() * portTICK_RATE_MS;
 						FieldHandle = osThreadNew(field_task, NULL, &field_attributes);
-						xTaskCreate(field_task, "FIELD", configMINIMAL_STACK_SIZE * 4, NULL, FIELD_TASK_PRIO, &field_xHandle);
 					}
 					else {
 						//error message
@@ -1657,7 +1641,6 @@ HAL_StatusTypeDef process_command (void)
 					if (xSemaphoreTake( exti_xSemaphore, 10000) == pdTRUE) {
 						time_origin = xTaskGetTickCount() * portTICK_RATE_MS;
 						FieldHandle = osThreadNew(field_task, NULL, &field_attributes);
-						xTaskCreate(field_task, "FIELD", configMINIMAL_STACK_SIZE * 4, NULL, FIELD_TASK_PRIO, &field_xHandle);
 					}
 					else {
 						//error message
@@ -1711,7 +1694,6 @@ HAL_StatusTypeDef process_command (void)
 					if (xSemaphoreTake( exti_xSemaphore, 10000) == pdTRUE) {
 						time_origin = xTaskGetTickCount() * portTICK_RATE_MS;
 						FieldHandle = osThreadNew(field_task, NULL, &field_attributes);
-						xTaskCreate(field_task, "FIELD", configMINIMAL_STACK_SIZE * 4, NULL, FIELD_TASK_PRIO, &field_xHandle);
 					}
 					else {
 						//error message
@@ -1765,7 +1747,6 @@ HAL_StatusTypeDef process_command (void)
 					if (xSemaphoreTake( exti_xSemaphore, 10000) == pdTRUE) {
 						time_origin = xTaskGetTickCount() * portTICK_RATE_MS;
 						FieldHandle = osThreadNew(field_task, NULL, &field_attributes);
-						xTaskCreate(field_task, "FIELD", configMINIMAL_STACK_SIZE * 4, NULL, FIELD_TASK_PRIO, &field_xHandle);
 					}
 					else {
 						//error message
@@ -1819,7 +1800,6 @@ HAL_StatusTypeDef process_command (void)
 					if (xSemaphoreTake( exti_xSemaphore, 10000) == pdTRUE) {
 						time_origin = xTaskGetTickCount() * portTICK_RATE_MS;
 						FieldHandle = osThreadNew(field_task, NULL, &field_attributes);
-						xTaskCreate(field_task, "FIELD", configMINIMAL_STACK_SIZE * 4, NULL, FIELD_TASK_PRIO, &field_xHandle);
 					}
 					else {
 						//error message
@@ -1873,7 +1853,6 @@ HAL_StatusTypeDef process_command (void)
 					if (xSemaphoreTake( exti_xSemaphore, 10000) == pdTRUE) {
 						time_origin = xTaskGetTickCount() * portTICK_RATE_MS;
 						FieldHandle = osThreadNew(field_task, NULL, &field_attributes);
-						xTaskCreate(field_task, "FIELD", configMINIMAL_STACK_SIZE * 4, NULL, FIELD_TASK_PRIO, &field_xHandle);
 					}
 					else {
 						//error message
@@ -1927,7 +1906,6 @@ HAL_StatusTypeDef process_command (void)
 					if (xSemaphoreTake( exti_xSemaphore, 10000) == pdTRUE) {
 						time_origin = xTaskGetTickCount() * portTICK_RATE_MS;
 						FieldHandle = osThreadNew(field_task, NULL, &field_attributes);
-						xTaskCreate(field_task, "FIELD", configMINIMAL_STACK_SIZE * 4, NULL, FIELD_TASK_PRIO, &field_xHandle);
 					}
 					else {
 						//error message
@@ -1981,7 +1959,6 @@ HAL_StatusTypeDef process_command (void)
 					if (xSemaphoreTake( exti_xSemaphore, 10000) == pdTRUE) {
 						time_origin = xTaskGetTickCount() * portTICK_RATE_MS;
 						FieldHandle = osThreadNew(field_task, NULL, &field_attributes);
-						xTaskCreate(field_task, "FIELD", configMINIMAL_STACK_SIZE * 4, NULL, FIELD_TASK_PRIO, &field_xHandle);
 					}
 					else {
 						//error message
@@ -2035,7 +2012,6 @@ HAL_StatusTypeDef process_command (void)
 					if (xSemaphoreTake( exti_xSemaphore, 10000) == pdTRUE) {
 						time_origin = xTaskGetTickCount() * portTICK_RATE_MS;
 						FieldHandle = osThreadNew(field_task, NULL, &field_attributes);
-						xTaskCreate(field_task, "FIELD", configMINIMAL_STACK_SIZE * 4, NULL, FIELD_TASK_PRIO, &field_xHandle);
 					}
 					else {
 						//error message
@@ -2089,7 +2065,6 @@ HAL_StatusTypeDef process_command (void)
 					if (xSemaphoreTake( exti_xSemaphore, 10000) == pdTRUE) {
 						time_origin = xTaskGetTickCount() * portTICK_RATE_MS;
 						FieldHandle = osThreadNew(field_task, NULL, &field_attributes);
-						xTaskCreate(field_task, "FIELD", configMINIMAL_STACK_SIZE * 4, NULL, FIELD_TASK_PRIO, &field_xHandle);
 					}
 					else {
 						//error message
@@ -2143,7 +2118,6 @@ HAL_StatusTypeDef process_command (void)
 					if (xSemaphoreTake( exti_xSemaphore, 10000) == pdTRUE) {
 						time_origin = xTaskGetTickCount() * portTICK_RATE_MS;
 						FieldHandle = osThreadNew(field_task, NULL, &field_attributes);
-						xTaskCreate(field_task, "FIELD", configMINIMAL_STACK_SIZE * 4, NULL, FIELD_TASK_PRIO, &field_xHandle);
 					}
 					else {
 						//error message
@@ -2157,9 +2131,9 @@ HAL_StatusTypeDef process_command (void)
 				osThreadTerminate( FieldHandle );
 			}
 			HAL_TIM_PWM_Stop(&htim3, TIM_CHANNEL_1);
-			__HAL_TIM_SET_AUTORELOAD(&htim3, 1400 - 1);
-			__HAL_TIM_SET_COMPARE(&htim3, TIM_CHANNEL_1, 100 - 1);
-			HAL_TIM_PWM_Start(&htim3, TIM_CHANNEL_1);
+//			__HAL_TIM_SET_AUTORELOAD(&htim3, 1400 - 1);
+//			__HAL_TIM_SET_COMPARE(&htim3, TIM_CHANNEL_1, 100 - 1);
+//			HAL_TIM_PWM_Start(&htim3, TIM_CHANNEL_1);
 	//				pwm_count = 0;
 
 		//config DO6/7/9/10/11/12
@@ -2197,7 +2171,10 @@ HAL_StatusTypeDef process_command (void)
 					if (xSemaphoreTake( exti_xSemaphore, 10000) == pdTRUE) {
 						time_origin = xTaskGetTickCount() * portTICK_RATE_MS;
 						FieldHandle = osThreadNew(field_task, NULL, &field_attributes);
-						xTaskCreate(field_task, "FIELD", configMINIMAL_STACK_SIZE * 4, NULL, FIELD_TASK_PRIO, &field_xHandle);
+						__HAL_TIM_SET_AUTORELOAD(&htim3, 1400 - 1);
+						__HAL_TIM_SET_COMPARE(&htim3, TIM_CHANNEL_1, 100 - 1);
+						HAL_TIM_OC_Start_IT(&htim3, TIM_CHANNEL_1);
+						HAL_TIM_PWM_Start(&htim3, TIM_CHANNEL_1);
 					}
 					else {
 						//error message
@@ -2211,9 +2188,9 @@ HAL_StatusTypeDef process_command (void)
 				osThreadTerminate( FieldHandle );
 			}
 			HAL_TIM_PWM_Stop(&htim3, TIM_CHANNEL_1);
-			__HAL_TIM_SET_AUTORELOAD(&htim3, 1400 - 1);
-			__HAL_TIM_SET_COMPARE(&htim3, TIM_CHANNEL_1, 100 - 1);
-			HAL_TIM_PWM_Start(&htim3, TIM_CHANNEL_1);
+//			__HAL_TIM_SET_AUTORELOAD(&htim3, 1400 - 1);
+//			__HAL_TIM_SET_COMPARE(&htim3, TIM_CHANNEL_1, 100 - 1);
+//			HAL_TIM_PWM_Start(&htim3, TIM_CHANNEL_1);
 	//				pwm_count = 0;
 
 		//config DO6/7/9/10/11/12
@@ -2251,8 +2228,10 @@ HAL_StatusTypeDef process_command (void)
 					if (xSemaphoreTake( exti_xSemaphore, 10000) == pdTRUE) {
 						time_origin = xTaskGetTickCount() * portTICK_RATE_MS;
 						FieldHandle = osThreadNew(field_task, NULL, &field_attributes);
-						xTaskCreate(field_task, "FIELD", configMINIMAL_STACK_SIZE * 4, NULL, FIELD_TASK_PRIO, &field_xHandle);
-					}
+						__HAL_TIM_SET_AUTORELOAD(&htim3, 1400 - 1);
+						__HAL_TIM_SET_COMPARE(&htim3, TIM_CHANNEL_1, 100 - 1);
+						HAL_TIM_OC_Start_IT(&htim3, TIM_CHANNEL_1);
+						HAL_TIM_PWM_Start(&htim3, TIM_CHANNEL_1);					}
 					else {
 						//error message
 					}
@@ -2304,7 +2283,6 @@ HAL_StatusTypeDef process_command (void)
 					if (xSemaphoreTake( exti_xSemaphore, 10000) == pdTRUE) {
 						time_origin = xTaskGetTickCount() * portTICK_RATE_MS;
 						FieldHandle = osThreadNew(field_task, NULL, &field_attributes);
-//						xTaskCreate(field_task, "FIELD", configMINIMAL_STACK_SIZE * 4, NULL, FIELD_TASK_PRIO, &field_xHandle);
 					}
 					else {
 						//error message
@@ -2357,7 +2335,6 @@ HAL_StatusTypeDef process_command (void)
 					if (xSemaphoreTake( exti_xSemaphore, 10000) == pdTRUE) {
 						time_origin = xTaskGetTickCount() * portTICK_RATE_MS;
 						FieldHandle = osThreadNew(field_task, NULL, &field_attributes);
-//						xTaskCreate(field_task, "FIELD", configMINIMAL_STACK_SIZE * 4, NULL, FIELD_TASK_PRIO, &field_xHandle);
 					}
 					else {
 						//error message
@@ -2411,7 +2388,6 @@ HAL_StatusTypeDef process_command (void)
 					if (xSemaphoreTake( exti_xSemaphore, 10000) == pdTRUE) {
 						time_origin = xTaskGetTickCount() * portTICK_RATE_MS;
 						FieldHandle = osThreadNew(field_task, NULL, &field_attributes);
-//						xTaskCreate(field_task, "FIELD", configMINIMAL_STACK_SIZE * 4, NULL, FIELD_TASK_PRIO, &field_xHandle);
 					}
 					else {
 						//error message
@@ -2465,7 +2441,6 @@ HAL_StatusTypeDef process_command (void)
 					if (xSemaphoreTake( exti_xSemaphore, 10000) == pdTRUE) {
 						time_origin = xTaskGetTickCount() * portTICK_RATE_MS;
 						FieldHandle = osThreadNew(field_task, NULL, &field_attributes);
-//						xTaskCreate(field_task, "FIELD", configMINIMAL_STACK_SIZE * 4, NULL, FIELD_TASK_PRIO, &field_xHandle);
 					}
 					else {
 						//error message
@@ -2518,7 +2493,6 @@ HAL_StatusTypeDef process_command (void)
 					if (xSemaphoreTake( exti_xSemaphore, 10000) == pdTRUE) {
 						time_origin = xTaskGetTickCount() * portTICK_RATE_MS;
 						FieldHandle = osThreadNew(field_task, NULL, &field_attributes);
-//						xTaskCreate(field_task, "FIELD", configMINIMAL_STACK_SIZE * 4, NULL, FIELD_TASK_PRIO, &field_xHandle);
 					}
 					else {
 						//error message

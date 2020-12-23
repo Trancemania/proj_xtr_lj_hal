@@ -1,9 +1,9 @@
 proj_xtr_lj_hal\queue.o: ../Middlewares/Third_Party/FreeRTOS/Source/queue.c
-proj_xtr_lj_hal\queue.o: D:\Keil_v5\ARM\ARMCC\Bin\..\include\stdlib.h
-proj_xtr_lj_hal\queue.o: D:\Keil_v5\ARM\ARMCC\Bin\..\include\string.h
+proj_xtr_lj_hal\queue.o: D:\Program Files\Keil\ARM\ARMCC\Bin\..\include\stdlib.h
+proj_xtr_lj_hal\queue.o: D:\Program Files\Keil\ARM\ARMCC\Bin\..\include\string.h
 proj_xtr_lj_hal\queue.o: ../Middlewares/Third_Party/FreeRTOS/Source/include/FreeRTOS.h
-proj_xtr_lj_hal\queue.o: D:\Keil_v5\ARM\ARMCC\Bin\..\include\stddef.h
-proj_xtr_lj_hal\queue.o: D:\Keil_v5\ARM\ARMCC\Bin\..\include\stdint.h
+proj_xtr_lj_hal\queue.o: D:\Program Files\Keil\ARM\ARMCC\Bin\..\include\stddef.h
+proj_xtr_lj_hal\queue.o: D:\Program Files\Keil\ARM\ARMCC\Bin\..\include\stdint.h
 proj_xtr_lj_hal\queue.o: ../Core/Inc/FreeRTOSConfig.h
 proj_xtr_lj_hal\queue.o: ../Middlewares/Third_Party/FreeRTOS/Source/include/projdefs.h
 proj_xtr_lj_hal\queue.o: ../Middlewares/Third_Party/FreeRTOS/Source/include/portable.h
