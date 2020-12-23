@@ -754,9 +754,10 @@ HAL_StatusTypeDef process_command (void)
 			if( FieldHandle != NULL ) {
 				osThreadTerminate( FieldHandle );
 			}
+			HAL_TIM_PWM_Stop(&htim3, TIM_CHANNEL_1);
 			__HAL_TIM_SET_AUTORELOAD(&htim3, 1333 - 1);
 			__HAL_TIM_SET_COMPARE(&htim3, TIM_CHANNEL_1, 100 - 1);
-			HAL_TIM_PWM_Stop(&htim3, TIM_CHANNEL_1);
+			HAL_TIM_PWM_Start(&htim3, TIM_CHANNEL_1);
 	//				pwm_count = 0;
 
 		//config DO6/7/9/10/11/12
@@ -806,9 +807,10 @@ HAL_StatusTypeDef process_command (void)
 			if( FieldHandle != NULL ) {
 				osThreadTerminate( FieldHandle );
 			}
+			HAL_TIM_PWM_Stop(&htim3, TIM_CHANNEL_1);
 			__HAL_TIM_SET_AUTORELOAD(&htim3, 1333 - 1);
 			__HAL_TIM_SET_COMPARE(&htim3, TIM_CHANNEL_1, 100 - 1);
-			HAL_TIM_PWM_Stop(&htim3, TIM_CHANNEL_1);
+			HAL_TIM_PWM_Start(&htim3, TIM_CHANNEL_1);
 	//				pwm_count = 0;
 
 		//config DO6/7/9/10/11/12
@@ -858,9 +860,10 @@ HAL_StatusTypeDef process_command (void)
 			if( FieldHandle != NULL ) {
 				osThreadTerminate( FieldHandle );
 			}
+			HAL_TIM_PWM_Stop(&htim3, TIM_CHANNEL_1);
 			__HAL_TIM_SET_AUTORELOAD(&htim3, 1333 - 1);
 			__HAL_TIM_SET_COMPARE(&htim3, TIM_CHANNEL_1, 100 - 1);
-			HAL_TIM_PWM_Stop(&htim3, TIM_CHANNEL_1);
+			HAL_TIM_PWM_Start(&htim3, TIM_CHANNEL_1);
 	//				pwm_count = 0;
 
 		//config DO6/7/9/10/11/12
@@ -911,9 +914,10 @@ HAL_StatusTypeDef process_command (void)
 			if( FieldHandle != NULL ) {
 				osThreadTerminate( FieldHandle );
 			}
+			HAL_TIM_PWM_Stop(&htim3, TIM_CHANNEL_1);			
 			__HAL_TIM_SET_AUTORELOAD(&htim3, 1333 - 1);
 			__HAL_TIM_SET_COMPARE(&htim3, TIM_CHANNEL_1, 100 - 1);
-			HAL_TIM_PWM_Stop(&htim3, TIM_CHANNEL_1);
+			HAL_TIM_PWM_Start(&htim3, TIM_CHANNEL_1);
 	//				pwm_count = 0;
 
 		//config DO6/7/9/10/11/12
@@ -964,9 +968,10 @@ HAL_StatusTypeDef process_command (void)
 			if( FieldHandle != NULL ) {
 				osThreadTerminate( FieldHandle );
 			}
+			HAL_TIM_PWM_Stop(&htim3, TIM_CHANNEL_1);
 			__HAL_TIM_SET_AUTORELOAD(&htim3, 1500 - 1);
 			__HAL_TIM_SET_COMPARE(&htim3, TIM_CHANNEL_1, 100 - 1);
-			HAL_TIM_PWM_Stop(&htim3, TIM_CHANNEL_1);
+			HAL_TIM_PWM_Start(&htim3, TIM_CHANNEL_1);
 	//				pwm_count = 0;
 
 		//config DO6/7/9/10/11/12
@@ -1017,9 +1022,10 @@ HAL_StatusTypeDef process_command (void)
 			if( FieldHandle != NULL ) {
 				osThreadTerminate( FieldHandle );
 			}
+			HAL_TIM_PWM_Stop(&htim3, TIM_CHANNEL_1);
 			__HAL_TIM_SET_AUTORELOAD(&htim3, 1500 - 1);
 			__HAL_TIM_SET_COMPARE(&htim3, TIM_CHANNEL_1, 100 - 1);
-			HAL_TIM_PWM_Stop(&htim3, TIM_CHANNEL_1);
+			HAL_TIM_PWM_Start(&htim3, TIM_CHANNEL_1);
 	//				pwm_count = 0;
 
 		//config DO6/7/9/10/11/12
@@ -1070,9 +1076,10 @@ HAL_StatusTypeDef process_command (void)
 			if( FieldHandle != NULL ) {
 				osThreadTerminate( FieldHandle );
 			}
+			HAL_TIM_PWM_Stop(&htim3, TIM_CHANNEL_1);
 			__HAL_TIM_SET_AUTORELOAD(&htim3, 1500 - 1);
 			__HAL_TIM_SET_COMPARE(&htim3, TIM_CHANNEL_1, 100 - 1);
-			HAL_TIM_PWM_Stop(&htim3, TIM_CHANNEL_1);
+			HAL_TIM_PWM_Start(&htim3, TIM_CHANNEL_1);
 	//				pwm_count = 0;
 
 		//config DO6/7/9/10/11/12
@@ -1123,9 +1130,10 @@ HAL_StatusTypeDef process_command (void)
 			if( FieldHandle != NULL ) {
 				osThreadTerminate( FieldHandle );
 			}
+			HAL_TIM_PWM_Stop(&htim3, TIM_CHANNEL_1);
 			__HAL_TIM_SET_AUTORELOAD(&htim3, 1500 - 1);
 			__HAL_TIM_SET_COMPARE(&htim3, TIM_CHANNEL_1, 100 - 1);
-			HAL_TIM_PWM_Stop(&htim3, TIM_CHANNEL_1);
+			HAL_TIM_PWM_Start(&htim3, TIM_CHANNEL_1);
 	//				pwm_count = 0;
 
 		//config DO6/7/9/10/11/12
@@ -1176,9 +1184,10 @@ HAL_StatusTypeDef process_command (void)
 			if( FieldHandle != NULL ) {
 				osThreadTerminate( FieldHandle );
 			}
+			HAL_TIM_PWM_Stop(&htim3, TIM_CHANNEL_1);
 			__HAL_TIM_SET_AUTORELOAD(&htim3, 1400 - 1);
 			__HAL_TIM_SET_COMPARE(&htim3, TIM_CHANNEL_1, 100 - 1);
-			HAL_TIM_PWM_Stop(&htim3, TIM_CHANNEL_1);
+			HAL_TIM_PWM_Start(&htim3, TIM_CHANNEL_1);
 	//				pwm_count = 0;
 
 		//config DO6/7/9/10/11/12
@@ -1229,9 +1238,10 @@ HAL_StatusTypeDef process_command (void)
 			if( FieldHandle != NULL ) {
 				osThreadTerminate( FieldHandle );
 			}
+			HAL_TIM_PWM_Stop(&htim3, TIM_CHANNEL_1);
 			__HAL_TIM_SET_AUTORELOAD(&htim3, 1400 - 1);
 			__HAL_TIM_SET_COMPARE(&htim3, TIM_CHANNEL_1, 100 - 1);
-			HAL_TIM_PWM_Stop(&htim3, TIM_CHANNEL_1);
+			HAL_TIM_PWM_Start(&htim3, TIM_CHANNEL_1);
 	//				pwm_count = 0;
 
 		//config DO6/7/9/10/11/12
@@ -1282,9 +1292,10 @@ HAL_StatusTypeDef process_command (void)
 			if( FieldHandle != NULL ) {
 				osThreadTerminate( FieldHandle );
 			}
+			HAL_TIM_PWM_Stop(&htim3, TIM_CHANNEL_1);
 			__HAL_TIM_SET_AUTORELOAD(&htim3, 1400 - 1);
 			__HAL_TIM_SET_COMPARE(&htim3, TIM_CHANNEL_1, 100 - 1);
-			HAL_TIM_PWM_Stop(&htim3, TIM_CHANNEL_1);
+			HAL_TIM_PWM_Start(&htim3, TIM_CHANNEL_1);
 	//				pwm_count = 0;
 
 		//config DO6/7/9/10/11/12
@@ -1335,9 +1346,10 @@ HAL_StatusTypeDef process_command (void)
 			if( FieldHandle != NULL ) {
 				osThreadTerminate( FieldHandle );
 			}
+			HAL_TIM_PWM_Stop(&htim3, TIM_CHANNEL_1);
 			__HAL_TIM_SET_AUTORELOAD(&htim3, 1400 - 1);
 			__HAL_TIM_SET_COMPARE(&htim3, TIM_CHANNEL_1, 100 - 1);
-			HAL_TIM_PWM_Stop(&htim3, TIM_CHANNEL_1);
+			HAL_TIM_PWM_Start(&htim3, TIM_CHANNEL_1);
 	//				pwm_count = 0;
 
 		//config DO6/7/9/10/11/12
@@ -1388,9 +1400,10 @@ HAL_StatusTypeDef process_command (void)
 			if( FieldHandle != NULL ) {
 				osThreadTerminate( FieldHandle );
 			}
+			HAL_TIM_PWM_Stop(&htim3, TIM_CHANNEL_1);
 			__HAL_TIM_SET_AUTORELOAD(&htim3, 1000 - 1);
 			__HAL_TIM_SET_COMPARE(&htim3, TIM_CHANNEL_1, 100 - 1);
-			HAL_TIM_PWM_Stop(&htim3, TIM_CHANNEL_1);
+			HAL_TIM_PWM_Start(&htim3, TIM_CHANNEL_1);
 	//				pwm_count = 0;
 
 		//config DO6/7/9/10/11/12
@@ -1441,9 +1454,10 @@ HAL_StatusTypeDef process_command (void)
 			if( FieldHandle != NULL ) {
 				osThreadTerminate( FieldHandle );
 			}
+			HAL_TIM_PWM_Stop(&htim3, TIM_CHANNEL_1);
 			__HAL_TIM_SET_AUTORELOAD(&htim3, 2000 - 1);
 			__HAL_TIM_SET_COMPARE(&htim3, TIM_CHANNEL_1, 100 - 1);
-			HAL_TIM_PWM_Stop(&htim3, TIM_CHANNEL_1);
+			HAL_TIM_PWM_Start(&htim3, TIM_CHANNEL_1);
 	//				pwm_count = 0;
 
 		//config DO6/7/9/10/11/12
@@ -1494,9 +1508,10 @@ HAL_StatusTypeDef process_command (void)
 			if( FieldHandle != NULL ) {
 				osThreadTerminate( FieldHandle );
 			}
+			HAL_TIM_PWM_Stop(&htim3, TIM_CHANNEL_1);
 			__HAL_TIM_SET_AUTORELOAD(&htim3, 1000 - 1);
 			__HAL_TIM_SET_COMPARE(&htim3, TIM_CHANNEL_1, 100 - 1);
-			HAL_TIM_PWM_Stop(&htim3, TIM_CHANNEL_1);
+			HAL_TIM_PWM_Start(&htim3, TIM_CHANNEL_1);
 	//				pwm_count = 0;
 
 		//config DO6/7/9/10/11/12
@@ -1547,9 +1562,10 @@ HAL_StatusTypeDef process_command (void)
 			if( FieldHandle != NULL ) {
 				osThreadTerminate( FieldHandle );
 			}
+			HAL_TIM_PWM_Stop(&htim3, TIM_CHANNEL_1);
 			__HAL_TIM_SET_AUTORELOAD(&htim3, 2000 - 1);
 			__HAL_TIM_SET_COMPARE(&htim3, TIM_CHANNEL_1, 100 - 1);
-			HAL_TIM_PWM_Stop(&htim3, TIM_CHANNEL_1);
+			HAL_TIM_PWM_Start(&htim3, TIM_CHANNEL_1);
 	//				pwm_count = 0;
 
 		//config DO6/7/9/10/11/12
@@ -1600,9 +1616,10 @@ HAL_StatusTypeDef process_command (void)
 			if( FieldHandle != NULL ) {
 				osThreadTerminate( FieldHandle );
 			}
+			HAL_TIM_PWM_Stop(&htim3, TIM_CHANNEL_1);
 			__HAL_TIM_SET_AUTORELOAD(&htim3, 1333- 1);
 			__HAL_TIM_SET_COMPARE(&htim3, TIM_CHANNEL_1, 100 - 1);
-			HAL_TIM_PWM_Stop(&htim3, TIM_CHANNEL_1);
+			HAL_TIM_PWM_Start(&htim3, TIM_CHANNEL_1);
 	//				pwm_count = 0;
 
 		//config DO6/7/9/10/11/12
@@ -1653,9 +1670,10 @@ HAL_StatusTypeDef process_command (void)
 			if( FieldHandle != NULL ) {
 				osThreadTerminate( FieldHandle );
 			}
+			HAL_TIM_PWM_Stop(&htim3, TIM_CHANNEL_1);
 			__HAL_TIM_SET_AUTORELOAD(&htim3, 1333 - 1);
 			__HAL_TIM_SET_COMPARE(&htim3, TIM_CHANNEL_1, 100 - 1);
-			HAL_TIM_PWM_Stop(&htim3, TIM_CHANNEL_1);
+			HAL_TIM_PWM_Start(&htim3, TIM_CHANNEL_1);
 	//				pwm_count = 0;
 
 		//config DO6/7/9/10/11/12
@@ -1706,9 +1724,10 @@ HAL_StatusTypeDef process_command (void)
 			if( FieldHandle != NULL ) {
 				osThreadTerminate( FieldHandle );
 			}
+			HAL_TIM_PWM_Stop(&htim3, TIM_CHANNEL_1);
 			__HAL_TIM_SET_AUTORELOAD(&htim3, 1333 - 1);
 			__HAL_TIM_SET_COMPARE(&htim3, TIM_CHANNEL_1, 100 - 1);
-			HAL_TIM_PWM_Stop(&htim3, TIM_CHANNEL_1);
+			HAL_TIM_PWM_Start(&htim3, TIM_CHANNEL_1);
 	//				pwm_count = 0;
 
 		//config DO6/7/9/10/11/12
@@ -1759,9 +1778,10 @@ HAL_StatusTypeDef process_command (void)
 			if( FieldHandle != NULL ) {
 				osThreadTerminate( FieldHandle );
 			}
+			HAL_TIM_PWM_Stop(&htim3, TIM_CHANNEL_1);
 			__HAL_TIM_SET_AUTORELOAD(&htim3, 1333 - 1);
 			__HAL_TIM_SET_COMPARE(&htim3, TIM_CHANNEL_1, 100 - 1);
-			HAL_TIM_PWM_Stop(&htim3, TIM_CHANNEL_1);
+			HAL_TIM_PWM_Start(&htim3, TIM_CHANNEL_1);
 	//				pwm_count = 0;
 
 		//config DO6/7/9/10/11/12
@@ -1812,9 +1832,10 @@ HAL_StatusTypeDef process_command (void)
 			if( FieldHandle != NULL ) {
 				osThreadTerminate( FieldHandle );
 			}
+			HAL_TIM_PWM_Stop(&htim3, TIM_CHANNEL_1);
 			__HAL_TIM_SET_AUTORELOAD(&htim3, 1333 - 1);
 			__HAL_TIM_SET_COMPARE(&htim3, TIM_CHANNEL_1, 100 - 1);
-			HAL_TIM_PWM_Stop(&htim3, TIM_CHANNEL_1);
+			HAL_TIM_PWM_Start(&htim3, TIM_CHANNEL_1);
 	//				pwm_count = 0;
 
 		//config DO6/7/9/10/11/12
@@ -1865,9 +1886,10 @@ HAL_StatusTypeDef process_command (void)
 			if( FieldHandle != NULL ) {
 				osThreadTerminate( FieldHandle );
 			}
+			HAL_TIM_PWM_Stop(&htim3, TIM_CHANNEL_1);
 			__HAL_TIM_SET_AUTORELOAD(&htim3, 1333 - 1);
 			__HAL_TIM_SET_COMPARE(&htim3, TIM_CHANNEL_1, 100 - 1);
-			HAL_TIM_PWM_Stop(&htim3, TIM_CHANNEL_1);
+			HAL_TIM_PWM_Start(&htim3, TIM_CHANNEL_1);
 	//				pwm_count = 0;
 
 		//config DO6/7/9/10/11/12
@@ -1918,9 +1940,10 @@ HAL_StatusTypeDef process_command (void)
 			if( FieldHandle != NULL ) {
 				osThreadTerminate( FieldHandle );
 			}
+			HAL_TIM_PWM_Stop(&htim3, TIM_CHANNEL_1);
 			__HAL_TIM_SET_AUTORELOAD(&htim3, 1333 - 1);
 			__HAL_TIM_SET_COMPARE(&htim3, TIM_CHANNEL_1, 100 - 1);
-			HAL_TIM_PWM_Stop(&htim3, TIM_CHANNEL_1);
+			HAL_TIM_PWM_Start(&htim3, TIM_CHANNEL_1);
 	//				pwm_count = 0;
 
 		//config DO6/7/9/10/11/12
@@ -1971,9 +1994,10 @@ HAL_StatusTypeDef process_command (void)
 			if( FieldHandle != NULL ) {
 				osThreadTerminate( FieldHandle );
 			}
+			HAL_TIM_PWM_Stop(&htim3, TIM_CHANNEL_1);
 			__HAL_TIM_SET_AUTORELOAD(&htim3, 1333 - 1);
 			__HAL_TIM_SET_COMPARE(&htim3, TIM_CHANNEL_1, 100 - 1);
-			HAL_TIM_PWM_Stop(&htim3, TIM_CHANNEL_1);
+			HAL_TIM_PWM_Start(&htim3, TIM_CHANNEL_1);
 	//				pwm_count = 0;
 
 		//config DO6/7/9/10/11/12
@@ -2024,9 +2048,10 @@ HAL_StatusTypeDef process_command (void)
 			if( FieldHandle != NULL ) {
 				osThreadTerminate( FieldHandle );
 			}
+			HAL_TIM_PWM_Stop(&htim3, TIM_CHANNEL_1);
 			__HAL_TIM_SET_AUTORELOAD(&htim3, 1333 - 1);
 			__HAL_TIM_SET_COMPARE(&htim3, TIM_CHANNEL_1, 100 - 1);
-			HAL_TIM_PWM_Stop(&htim3, TIM_CHANNEL_1);
+			HAL_TIM_PWM_Start(&htim3, TIM_CHANNEL_1);
 	//				pwm_count = 0;
 
 		//config DO6/7/9/10/11/12
@@ -2077,9 +2102,10 @@ HAL_StatusTypeDef process_command (void)
 			if( FieldHandle != NULL ) {
 				osThreadTerminate( FieldHandle );
 			}
+			HAL_TIM_PWM_Stop(&htim3, TIM_CHANNEL_1);
 			__HAL_TIM_SET_AUTORELOAD(&htim3, 1333 - 1);
 			__HAL_TIM_SET_COMPARE(&htim3, TIM_CHANNEL_1, 100 - 1);
-			HAL_TIM_PWM_Stop(&htim3, TIM_CHANNEL_1);
+			HAL_TIM_PWM_Start(&htim3, TIM_CHANNEL_1);
 	//				pwm_count = 0;
 
 		//config DO6/7/9/10/11/12
@@ -2130,9 +2156,10 @@ HAL_StatusTypeDef process_command (void)
 			if( FieldHandle != NULL ) {
 				osThreadTerminate( FieldHandle );
 			}
+			HAL_TIM_PWM_Stop(&htim3, TIM_CHANNEL_1);
 			__HAL_TIM_SET_AUTORELOAD(&htim3, 1400 - 1);
 			__HAL_TIM_SET_COMPARE(&htim3, TIM_CHANNEL_1, 100 - 1);
-			HAL_TIM_PWM_Stop(&htim3, TIM_CHANNEL_1);
+			HAL_TIM_PWM_Start(&htim3, TIM_CHANNEL_1);
 	//				pwm_count = 0;
 
 		//config DO6/7/9/10/11/12
@@ -2183,9 +2210,10 @@ HAL_StatusTypeDef process_command (void)
 			if( FieldHandle != NULL ) {
 				osThreadTerminate( FieldHandle );
 			}
+			HAL_TIM_PWM_Stop(&htim3, TIM_CHANNEL_1);
 			__HAL_TIM_SET_AUTORELOAD(&htim3, 1400 - 1);
 			__HAL_TIM_SET_COMPARE(&htim3, TIM_CHANNEL_1, 100 - 1);
-			HAL_TIM_PWM_Stop(&htim3, TIM_CHANNEL_1);
+			HAL_TIM_PWM_Start(&htim3, TIM_CHANNEL_1);
 	//				pwm_count = 0;
 
 		//config DO6/7/9/10/11/12
@@ -2342,9 +2370,10 @@ HAL_StatusTypeDef process_command (void)
 			if( FieldHandle != NULL ) {
 				osThreadTerminate( FieldHandle );
 			}
+			HAL_TIM_PWM_Stop(&htim3, TIM_CHANNEL_1);
 			__HAL_TIM_SET_AUTORELOAD(&htim3, 1333 - 1);
 			__HAL_TIM_SET_COMPARE(&htim3, TIM_CHANNEL_1, 100 - 1);
-			HAL_TIM_PWM_Stop(&htim3, TIM_CHANNEL_1);
+			HAL_TIM_PWM_Start(&htim3, TIM_CHANNEL_1);
 	//				pwm_count = 0;
 
 		//config DO6/7/9/10/11/12
@@ -2392,6 +2421,20 @@ HAL_StatusTypeDef process_command (void)
 			return HAL_OK;
 
 		case 0x23:
+			if( FieldHandle != NULL ) {
+				osThreadTerminate( FieldHandle );
+			}
+			HAL_TIM_PWM_Stop(&htim3, TIM_CHANNEL_1);
+			__HAL_TIM_SET_AUTORELOAD(&htim3, 1333 - 1);
+			__HAL_TIM_SET_COMPARE(&htim3, TIM_CHANNEL_1, 100 - 1);
+			HAL_TIM_PWM_Start(&htim3, TIM_CHANNEL_1);
+	//				pwm_count = 0;
+
+		//config DO6/7/9/10/11/12
+			HAL_GPIO_WritePin(GPIOA, GPIO_PIN_15, GPIO_PIN_SET);
+			HAL_GPIO_WritePin(GPIOE, GPIO_PIN_0|GPIO_PIN_3 |GPIO_PIN_4|GPIO_PIN_5 , GPIO_PIN_SET);
+			HAL_GPIO_WritePin(GPIOE, GPIO_PIN_1 , GPIO_PIN_RESET);
+		
 			if (xSemaphoreTake( uart_A1_xSemaphore,10000) == pdTRUE) {
 					// hand shake
 					// fill buffer as in tab3B1
