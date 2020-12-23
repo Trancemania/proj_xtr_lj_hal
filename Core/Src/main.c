@@ -82,12 +82,20 @@ uint8_t previous_command = 0;
 uint8_t current_command = 0;
 uint8_t UART_send_buffer[16];
 uint8_t UART_recv_buffer[16];
+uint8_t UART_field_buffer[16];
 uint8_t ch;
 int uart_recv_cnt = 0;
 xSemaphoreHandle uart_A1_xSemaphore = NULL;
-portBASE_TYPE uart_xHigherPriorityTaskWoken;
+xSemaphoreHandle exti_xSemaphore = NULL;
 portTickType time_origin;
+volatile int pwm_count = 0;
 
+osThreadId_t FieldHandle;
+const osThreadAttr_t field_attributes = {
+  .name = "FieldTask",
+  .priority = (osPriority_t) osPriorityLow,
+  .stack_size = 128 * 4
+};
 /* USER CODE END PV */
 
 /* Private function prototypes -----------------------------------------------*/
@@ -103,9 +111,10 @@ void StartDefaultTask(void *argument);
 void StartBlink(void *argument);
 void StartKeepState(void *argument);
 
+
 /* USER CODE BEGIN PFP */
 HAL_StatusTypeDef process_command (void);
-
+void field_task(void *argument);
 
 /* USER CODE END PFP */
 
@@ -162,6 +171,8 @@ int main(void)
   /* USER CODE BEGIN RTOS_SEMAPHORES */
   /* add semaphores, ... */
   vSemaphoreCreateBinary(uart_A1_xSemaphore);
+	vSemaphoreCreateBinary(exti_xSemaphore);
+	
   /* USER CODE END RTOS_SEMAPHORES */
 
   /* USER CODE BEGIN RTOS_TIMERS */
@@ -597,6 +608,7 @@ static void MX_GPIO_Init(void)
 
 void HAL_GPIO_EXTI_Callback(uint16_t GPIO_Pin)
 {
+	portBASE_TYPE xHigherPriorityTaskWoken;
   if(GPIO_Pin == GPIO_PIN_2 || GPIO_Pin == GPIO_PIN_3 || GPIO_Pin == GPIO_PIN_4 || GPIO_Pin == GPIO_PIN_5 || GPIO_Pin == GPIO_PIN_7 || GPIO_Pin == GPIO_PIN_8 || GPIO_Pin == GPIO_PIN_9)
 	{
 //		if(exti_lock == 0) {
@@ -646,6 +658,7 @@ void HAL_GPIO_EXTI_Callback(uint16_t GPIO_Pin)
 		if(HAL_GPIO_ReadPin(GPIOC, GPIO_PIN_13) == 1)
 		{
 			HAL_GPIO_WritePin(GPIOE, GPIO_PIN_6, GPIO_PIN_RESET);
+			xSemaphoreGiveFromISR( exti_xSemaphore, &xHigherPriorityTaskWoken );
 		}
 	}
 }
@@ -668,6 +681,9 @@ HAL_StatusTypeDef process_command (void)
 			HAL_GPIO_WritePin(GPIOE, GPIO_PIN_0| GPIO_PIN_1| GPIO_PIN_3| GPIO_PIN_4| GPIO_PIN_5| GPIO_PIN_6| GPIO_PIN_7, GPIO_PIN_SET);
 			HAL_TIM_PWM_Stop(&htim3, TIM_CHANNEL_1);
 			__HAL_TIM_SET_COMPARE(&htim3, TIM_CHANNEL_1, 0);
+			if( FieldHandle != NULL ) {
+				osThreadTerminate( FieldHandle );
+			}
 			return HAL_OK;
 		
 		case 0xff:
@@ -676,9 +692,15 @@ HAL_StatusTypeDef process_command (void)
 			HAL_GPIO_WritePin(GPIOE, GPIO_PIN_0| GPIO_PIN_1| GPIO_PIN_3| GPIO_PIN_4| GPIO_PIN_5| GPIO_PIN_6| GPIO_PIN_7, GPIO_PIN_SET);
 			HAL_TIM_PWM_Stop(&htim3, TIM_CHANNEL_1);
 			__HAL_TIM_SET_COMPARE(&htim3, TIM_CHANNEL_1, 0);
+			if( FieldHandle != NULL ) {
+				osThreadTerminate( FieldHandle );
+			}
 			return HAL_OK;
 		
 		case 0x01:
+			if( FieldHandle != NULL ) {
+				osThreadTerminate( FieldHandle );
+			}
 			HAL_TIM_PWM_Stop(&htim3, TIM_CHANNEL_1);
 			__HAL_TIM_SET_COMPARE(&htim3, TIM_CHANNEL_1, 0);
 	//				pwm_count = 0;
@@ -688,7 +710,7 @@ HAL_StatusTypeDef process_command (void)
 			HAL_GPIO_WritePin(GPIOE, GPIO_PIN_1| GPIO_PIN_3| GPIO_PIN_4, GPIO_PIN_SET);
 			HAL_GPIO_WritePin(GPIOE, GPIO_PIN_0| GPIO_PIN_5, GPIO_PIN_RESET);
 		
-			if (xSemaphoreTake( uart_A1_xSemaphore, portMAX_DELAY) == pdTRUE) {
+			if (xSemaphoreTake( uart_A1_xSemaphore, 10000) == pdTRUE) {
 					// hand shake
 					// fill buffer as in tab3B1
 					// function start: repeated code of hand shake sent tab3B1
@@ -714,15 +736,22 @@ HAL_StatusTypeDef process_command (void)
 					
 					// send buffer
 					HAL_UART_Transmit_DMA(&huart1, (uint8_t *)&UART_send_buffer, 13);   //choose uart line
-					
-					time_origin = xTaskGetTickCount() * portTICK_RATE_MS;
+					if (xSemaphoreTake( exti_xSemaphore, 10000) == pdTRUE) {
+						time_origin = xTaskGetTickCount() * portTICK_RATE_MS;
+						FieldHandle = osThreadNew(field_task, NULL, &field_attributes);
+//						xTaskCreate(field_task, "FIELD", configMINIMAL_STACK_SIZE * 4, NULL, FIELD_TASK_PRIO, &field_xHandle);
+					}
+					else {
+						//error message
+					}
 			}
 			return HAL_OK;
 		
 		case 0x02:
+			HAL_TIM_PWM_Stop(&htim3, TIM_CHANNEL_1);
 			__HAL_TIM_SET_AUTORELOAD(&htim3, 1333 - 1);
 			__HAL_TIM_SET_COMPARE(&htim3, TIM_CHANNEL_1, 100 - 1);
-			HAL_TIM_PWM_Stop(&htim3, TIM_CHANNEL_1);
+			HAL_TIM_PWM_Start(&htim3, TIM_CHANNEL_1);
 	//				pwm_count = 0;
 
 		//config DO6/7/9/10/11/12
@@ -1041,6 +1070,9 @@ HAL_StatusTypeDef process_command (void)
 			HAL_GPIO_WritePin(GPIOA, GPIO_PIN_15, GPIO_PIN_SET);
 			HAL_GPIO_WritePin(GPIOE, GPIO_PIN_0 |GPIO_PIN_4|GPIO_PIN_5, GPIO_PIN_SET);
 			HAL_GPIO_WritePin(GPIOE,  GPIO_PIN_1| GPIO_PIN_3, GPIO_PIN_RESET);
+		
+//			HAL_TIM_OC_Start_IT(&htim3, TIM_CHANNEL_1);
+		//varied frequency, same as 0x1F
 			return HAL_OK;
 
 		case 0x1F:
@@ -1116,13 +1148,612 @@ HAL_StatusTypeDef process_command (void)
 			return HAL_OK;
 		
 		default:
+//			HAL_TIM_OC_Start_IT(&htim3, TIM_CHANNEL_1);
 			break;
 	}
 	return HAL_OK;
 }
 
+void HAL_TIM_IC_CaptureCallback(TIM_HandleTypeDef *htim)
+{
+//	 portBASE_TYPE xHigherPriorityTaskWoken;
+	 if(htim->Instance==TIM3){
+      switch(pwm_count){
+			case 0 : 
+						__HAL_TIM_SET_AUTORELOAD(&htim3, 1510 - 1);
+						pwm_count++;
+						break;
+			case 1 : 
+						__HAL_TIM_SET_AUTORELOAD(&htim3, 1600 - 1);
+						pwm_count++;
+						break;
+			case 2 : 
+						__HAL_TIM_SET_AUTORELOAD(&htim3, 1570 - 1);
+						pwm_count++;
+						break;
+			case 3 : 
+						__HAL_TIM_SET_AUTORELOAD(&htim3, 1510 - 1);
+						pwm_count++;
+						break;
+			case 4 : 
+						__HAL_TIM_SET_AUTORELOAD(&htim3, 1470 - 1);
+						pwm_count++;
+						break;
+			case 5 : 
+						__HAL_TIM_SET_AUTORELOAD(&htim3, 1380 - 1);
+						pwm_count++;
+						break;
+			case 6 : 
+						__HAL_TIM_SET_AUTORELOAD(&htim3, 1300 - 1);
+						pwm_count++;
+						break;
+			case 7 : 
+						__HAL_TIM_SET_AUTORELOAD(&htim3, 1210 - 1);
+						pwm_count++;
+						break;
+			case 8 : 
+						__HAL_TIM_SET_AUTORELOAD(&htim3, 1160 - 1);
+						pwm_count++;
+						break;
+			case 9 : 
+						__HAL_TIM_SET_AUTORELOAD(&htim3, 1130 - 1);
+						pwm_count++;
+						break;
+			case 10 : 
+						__HAL_TIM_SET_AUTORELOAD(&htim3, 1170 - 1);
+						pwm_count++;
+						break;
+			case 11 : 
+						__HAL_TIM_SET_AUTORELOAD(&htim3, 1090 - 1);
+						pwm_count++;
+						break;
+			case 12 : 
+						__HAL_TIM_SET_AUTORELOAD(&htim3, 1090 - 1);
+						pwm_count++;
+						break;
+			case 13 : 
+						__HAL_TIM_SET_AUTORELOAD(&htim3, 1333 - 1);
+						pwm_count=0;
+						HAL_TIM_OC_Stop_IT(&htim3, TIM_CHANNEL_1);
+//						xSemaphoreGiveFromISR( pwm_xSemaphore, &xHigherPriorityTaskWoken );
+						break;
+			default:
+						pwm_count=0;
+						HAL_TIM_OC_Stop_IT(&htim3, TIM_CHANNEL_1);
+						break;
+			}		
+	 }
+}
+
+void field_task(void *argument){
+	portTickType temp_t;
+	int16_t epsilon;
+	int16_t beta;
+	unsigned int frame_verify;
+	do {
+		temp_t = xTaskGetTickCount() * portTICK_RATE_MS - time_origin;
+		//large field
+		if ( temp_t <= 3520 ) {
+			UART_field_buffer[0] = 0xA6;
+			UART_field_buffer[1] = 0x10;
+			UART_field_buffer[2] = 0x81;
+			UART_field_buffer[3] = temp_t & 0xff;
+			UART_field_buffer[4] = (temp_t >> 8) & 0xff;
+			UART_field_buffer[5] = (temp_t >> 16) & 0xff;
+			UART_field_buffer[6] = (temp_t >> 24) & 0xff;
+			switch (current_command) {
+				case 0x1D:
+					epsilon = 0;
+					beta = -21537;
+					UART_field_buffer[7] = epsilon & 0xff;
+					UART_field_buffer[8] = (epsilon >> 8) & 0xff;
+					UART_field_buffer[9] = beta & 0xff;
+					UART_field_buffer[10] = (beta >> 8) & 0xff;
+					break;
+								
+				case 0x1F:
+					epsilon = 0;
+					beta = -21537;
+					UART_field_buffer[7] = epsilon & 0xff;
+					UART_field_buffer[8] = (epsilon >> 8) & 0xff;
+					UART_field_buffer[9] = beta & 0xff;
+					UART_field_buffer[10] = (beta >> 8) & 0xff;
+					break;
+				case 0x01:
+				  break;
+				case 0x02:
+				  break;
+				case 0x03:
+					epsilon = 0;
+					beta = 0;
+					UART_field_buffer[7] = epsilon & 0xff;
+					UART_field_buffer[8] = (epsilon >> 8) & 0xff;
+					UART_field_buffer[9] = beta & 0xff;
+					UART_field_buffer[10] = (beta >> 8) & 0xff;
+				  break;
+				case 0x04:
+					epsilon = 0;
+					beta = 0;
+					UART_field_buffer[7] = epsilon & 0xff;
+					UART_field_buffer[8] = (epsilon >> 8) & 0xff;
+					UART_field_buffer[9] = beta & 0xff;
+					UART_field_buffer[10] = (beta >> 8) & 0xff;
+				  break;
+				case 0x05:
+					epsilon = 0;
+					beta = 0;
+					UART_field_buffer[7] = epsilon & 0xff;
+					UART_field_buffer[8] = (epsilon >> 8) & 0xff;
+					UART_field_buffer[9] = beta & 0xff;
+					UART_field_buffer[10] = (beta >> 8) & 0xff;
+				  break;
+				case 0x06:
+					epsilon = 10338;
+					beta = 0;
+					UART_field_buffer[7] = epsilon & 0xff;
+					UART_field_buffer[8] = (epsilon >> 8) & 0xff;
+					UART_field_buffer[9] = beta & 0xff;
+					UART_field_buffer[10] = (beta >> 8) & 0xff;
+				  break;
+				case 0x07:
+					epsilon = 11199;
+					beta = 0;
+					UART_field_buffer[7] = epsilon & 0xff;
+					UART_field_buffer[8] = (epsilon >> 8) & 0xff;
+					UART_field_buffer[9] = beta & 0xff;
+					UART_field_buffer[10] = (beta >> 8) & 0xff;
+				  break;
+				case 0x08:
+					epsilon = 14645;
+					beta = 0;
+					UART_field_buffer[7] = epsilon & 0xff;
+					UART_field_buffer[8] = (epsilon >> 8) & 0xff;
+					UART_field_buffer[9] = beta & 0xff;
+					UART_field_buffer[10] = (beta >> 8) & 0xff;
+				  break;
+				case 0x09:
+					epsilon = 15506;
+					beta = 0;
+					UART_field_buffer[7] = epsilon & 0xff;
+					UART_field_buffer[8] = (epsilon >> 8) & 0xff;
+					UART_field_buffer[9] = beta & 0xff;
+					UART_field_buffer[10] = (beta >> 8) & 0xff;
+				  break;
+				case 0x0A:
+					epsilon = 10338;
+					beta = 0;
+					UART_field_buffer[7] = epsilon & 0xff;
+					UART_field_buffer[8] = (epsilon >> 8) & 0xff;
+					UART_field_buffer[9] = beta & 0xff;
+					UART_field_buffer[10] = (beta >> 8) & 0xff;
+				  break;
+				case 0x0B:
+					epsilon = 11199;
+					beta = 0;
+					UART_field_buffer[7] = epsilon & 0xff;
+					UART_field_buffer[8] = (epsilon >> 8) & 0xff;
+					UART_field_buffer[9] = beta & 0xff;
+					UART_field_buffer[10] = (beta >> 8) & 0xff;
+				  break;
+				case 0x0C:
+					epsilon = 12491;
+					beta = 0;
+					UART_field_buffer[7] = epsilon & 0xff;
+					UART_field_buffer[8] = (epsilon >> 8) & 0xff;
+					UART_field_buffer[9] = beta & 0xff;
+					UART_field_buffer[10] = (beta >> 8) & 0xff;
+				  break;
+				case 0x0D:
+					epsilon = 13353;
+					beta = 0;
+					UART_field_buffer[7] = epsilon & 0xff;
+					UART_field_buffer[8] = (epsilon >> 8) & 0xff;
+					UART_field_buffer[9] = beta & 0xff;
+					UART_field_buffer[10] = (beta >> 8) & 0xff;
+				  break;
+				case 0x0E:
+					epsilon = 0;
+					beta = 0;
+					UART_field_buffer[7] = epsilon & 0xff;
+					UART_field_buffer[8] = (epsilon >> 8) & 0xff;
+					UART_field_buffer[9] = beta & 0xff;
+					UART_field_buffer[10] = (beta >> 8) & 0xff;
+				  break;
+				case 0x0F:
+					epsilon = 0;
+					beta = 0;
+					UART_field_buffer[7] = epsilon & 0xff;
+					UART_field_buffer[8] = (epsilon >> 8) & 0xff;
+					UART_field_buffer[9] = beta & 0xff;
+					UART_field_buffer[10] = (beta >> 8) & 0xff;
+				  break;
+				case 0x10:
+					epsilon = 0;
+					beta = 0;
+					UART_field_buffer[7] = epsilon & 0xff;
+					UART_field_buffer[8] = (epsilon >> 8) & 0xff;
+					UART_field_buffer[9] = beta & 0xff;
+					UART_field_buffer[10] = (beta >> 8) & 0xff;
+				  break;
+				case 0x11:
+					epsilon = 0;
+					beta = 0;
+					UART_field_buffer[7] = epsilon & 0xff;
+					UART_field_buffer[8] = (epsilon >> 8) & 0xff;
+					UART_field_buffer[9] = beta & 0xff;
+					UART_field_buffer[10] = (beta >> 8) & 0xff;
+				  break;
+				case 0x12:
+					epsilon = -1738;
+					beta = 0;
+					UART_field_buffer[7] = epsilon & 0xff;
+					UART_field_buffer[8] = (epsilon >> 8) & 0xff;
+					UART_field_buffer[9] = beta & 0xff;
+					UART_field_buffer[10] = (beta >> 8) & 0xff;
+				  break;
+				case 0x13:
+					epsilon = 1738;
+					beta = 0;
+					UART_field_buffer[7] = epsilon & 0xff;
+					UART_field_buffer[8] = (epsilon >> 8) & 0xff;
+					UART_field_buffer[9] = beta & 0xff;
+					UART_field_buffer[10] = (beta >> 8) & 0xff;
+				  break;
+				case 0x14:
+					epsilon = 0;
+					beta = 1738;
+					UART_field_buffer[7] = epsilon & 0xff;
+					UART_field_buffer[8] = (epsilon >> 8) & 0xff;
+					UART_field_buffer[9] = beta & 0xff;
+					UART_field_buffer[10] = (beta >> 8) & 0xff;
+				  break;
+				case 0x15:
+					epsilon = 0;
+					beta = -1738;
+					UART_field_buffer[7] = epsilon & 0xff;
+					UART_field_buffer[8] = (epsilon >> 8) & 0xff;
+					UART_field_buffer[9] = beta & 0xff;
+					UART_field_buffer[10] = (beta >> 8) & 0xff;
+				  break;
+				case 0x16:
+					epsilon = -1738;
+					beta = 0;
+					UART_field_buffer[7] = epsilon & 0xff;
+					UART_field_buffer[8] = (epsilon >> 8) & 0xff;
+					UART_field_buffer[9] = beta & 0xff;
+					UART_field_buffer[10] = (beta >> 8) & 0xff;
+				  break;
+				case 0x17:
+					epsilon = 1738;
+					beta = 0;
+					UART_field_buffer[7] = epsilon & 0xff;
+					UART_field_buffer[8] = (epsilon >> 8) & 0xff;
+					UART_field_buffer[9] = beta & 0xff;
+					UART_field_buffer[10] = (beta >> 8) & 0xff;
+				  break;
+				case 0x18:
+					epsilon = 0;
+					beta = 1738;
+					UART_field_buffer[7] = epsilon & 0xff;
+					UART_field_buffer[8] = (epsilon >> 8) & 0xff;
+					UART_field_buffer[9] = beta & 0xff;
+					UART_field_buffer[10] = (beta >> 8) & 0xff;
+				  break;
+				case 0x19:
+					epsilon = 0;
+					beta = -1738;
+					UART_field_buffer[7] = epsilon & 0xff;
+					UART_field_buffer[8] = (epsilon >> 8) & 0xff;
+					UART_field_buffer[9] = beta & 0xff;
+					UART_field_buffer[10] = (beta >> 8) & 0xff;
+				  break;
+				case 0x1A:
+					epsilon = 21537;
+					beta = -108;
+					UART_field_buffer[7] = epsilon & 0xff;
+					UART_field_buffer[8] = (epsilon >> 8) & 0xff;
+					UART_field_buffer[9] = beta & 0xff;
+					UART_field_buffer[10] = (beta >> 8) & 0xff;
+				  break;
+				case 0x1B:
+					epsilon = 21537;
+					beta = -108;
+					UART_field_buffer[7] = epsilon & 0xff;
+					UART_field_buffer[8] = (epsilon >> 8) & 0xff;
+					UART_field_buffer[9] = beta & 0xff;
+					UART_field_buffer[10] = (beta >> 8) & 0xff;
+				  break;
+				case 0x20:
+				  break;
+				case 0x21:
+				  break;
+				case 0x22:
+				  break;
+				case 0x23:
+				  break;
+				case 0x24:
+				  break;
+				default:
+					UART_field_buffer[7] = 0;
+					UART_field_buffer[8] = 0;
+					UART_field_buffer[9] = 0;
+					UART_field_buffer[10] = 0;
+					break;
+			}
+			UART_field_buffer[11] = 0x00;
+			UART_field_buffer[12] = 2;
+			UART_field_buffer[13] = 0x01;
+			frame_verify = UART_field_buffer[2] + UART_field_buffer[3] + UART_field_buffer[4] + UART_field_buffer[5] + \
+										 UART_field_buffer[6] + UART_field_buffer[7] + UART_field_buffer[8] + UART_field_buffer[9] + \
+										 UART_field_buffer[10] + UART_field_buffer[11] + UART_field_buffer[12] + UART_field_buffer[13];
+			UART_field_buffer[14] = frame_verify & 0xff;
+			UART_field_buffer[15] = 0x86;
+			HAL_UART_Transmit_DMA(&huart1, (uint8_t *)&UART_field_buffer, 16);   //choose uart line
+		}
+		//small field
+		else {
+			UART_field_buffer[0] = 0xA6;
+			UART_field_buffer[1] = 0x10;
+			UART_field_buffer[2] = 0x81;
+			UART_field_buffer[3] = temp_t & 0xff;
+			UART_field_buffer[4] = (temp_t >> 8) & 0xff;
+			UART_field_buffer[5] = (temp_t >> 16) & 0xff;
+			UART_field_buffer[6] = (temp_t >> 24) & 0xff;
+			switch (current_command) {
+				case 0x1D:
+					epsilon = 0;
+					beta = -16383;
+					UART_field_buffer[7] = epsilon & 0xff;
+					UART_field_buffer[8] = (epsilon >> 8) & 0xff;
+					UART_field_buffer[9] = beta & 0xff;
+					UART_field_buffer[10] = (beta >> 8) & 0xff;
+					break;
+				case 0x1F:
+					epsilon = 0;
+					beta = -16383;
+					UART_field_buffer[7] = epsilon & 0xff;
+					UART_field_buffer[8] = (epsilon >> 8) & 0xff;
+					UART_field_buffer[9] = beta & 0xff;
+					UART_field_buffer[10] = (beta >> 8) & 0xff;
+					break;
+				case 0x01:
+				  break;
+				case 0x02:
+				  break;
+				case 0x03:
+					epsilon = 0;
+					beta = 0;
+					UART_field_buffer[7] = epsilon & 0xff;
+					UART_field_buffer[8] = (epsilon >> 8) & 0xff;
+					UART_field_buffer[9] = beta & 0xff;
+					UART_field_buffer[10] = (beta >> 8) & 0xff;
+				  break;
+				case 0x04:
+					epsilon = 0;
+					beta = 0;
+					UART_field_buffer[7] = epsilon & 0xff;
+					UART_field_buffer[8] = (epsilon >> 8) & 0xff;
+					UART_field_buffer[9] = beta & 0xff;
+					UART_field_buffer[10] = (beta >> 8) & 0xff;
+				  break;
+				case 0x05:
+					epsilon = 0;
+					beta = 0;
+					UART_field_buffer[7] = epsilon & 0xff;
+					UART_field_buffer[8] = (epsilon >> 8) & 0xff;
+					UART_field_buffer[9] = beta & 0xff;
+					UART_field_buffer[10] = (beta >> 8) & 0xff;
+				  break;
+				case 0x06:
+					epsilon = 7864;
+					beta = 0;
+					UART_field_buffer[7] = epsilon & 0xff;
+					UART_field_buffer[8] = (epsilon >> 8) & 0xff;
+					UART_field_buffer[9] = beta & 0xff;
+					UART_field_buffer[10] = (beta >> 8) & 0xff;
+				  break;
+				case 0x07:
+					epsilon = 8519;
+					beta = 0;
+					UART_field_buffer[7] = epsilon & 0xff;
+					UART_field_buffer[8] = (epsilon >> 8) & 0xff;
+					UART_field_buffer[9] = beta & 0xff;
+					UART_field_buffer[10] = (beta >> 8) & 0xff;
+				  break;
+				case 0x08:
+					epsilon = 11140;
+					beta = 0;
+					UART_field_buffer[7] = epsilon & 0xff;
+					UART_field_buffer[8] = (epsilon >> 8) & 0xff;
+					UART_field_buffer[9] = beta & 0xff;
+					UART_field_buffer[10] = (beta >> 8) & 0xff;
+				  break;
+				case 0x09:
+					epsilon = 11796;
+					beta = 0;
+					UART_field_buffer[7] = epsilon & 0xff;
+					UART_field_buffer[8] = (epsilon >> 8) & 0xff;
+					UART_field_buffer[9] = beta & 0xff;
+					UART_field_buffer[10] = (beta >> 8) & 0xff;
+				  break;
+				case 0x0A:
+					epsilon = 7864;
+					beta = 0;
+					UART_field_buffer[7] = epsilon & 0xff;
+					UART_field_buffer[8] = (epsilon >> 8) & 0xff;
+					UART_field_buffer[9] = beta & 0xff;
+					UART_field_buffer[10] = (beta >> 8) & 0xff;
+				  break;
+				case 0x0B:
+					epsilon = 8619;
+					beta = 0;
+					UART_field_buffer[7] = epsilon & 0xff;
+					UART_field_buffer[8] = (epsilon >> 8) & 0xff;
+					UART_field_buffer[9] = beta & 0xff;
+					UART_field_buffer[10] = (beta >> 8) & 0xff;
+				  break;
+				case 0x0C:
+					epsilon = 9502;
+					beta = 0;
+					UART_field_buffer[7] = epsilon & 0xff;
+					UART_field_buffer[8] = (epsilon >> 8) & 0xff;
+					UART_field_buffer[9] = beta & 0xff;
+					UART_field_buffer[10] = (beta >> 8) & 0xff;
+				  break;
+				case 0x0D:
+					epsilon = 10158;
+					beta = 0;
+					UART_field_buffer[7] = epsilon & 0xff;
+					UART_field_buffer[8] = (epsilon >> 8) & 0xff;
+					UART_field_buffer[9] = beta & 0xff;
+					UART_field_buffer[10] = (beta >> 8) & 0xff;
+				  break;
+				case 0x0E:
+					epsilon = 0;
+					beta = 0;
+					UART_field_buffer[7] = epsilon & 0xff;
+					UART_field_buffer[8] = (epsilon >> 8) & 0xff;
+					UART_field_buffer[9] = beta & 0xff;
+					UART_field_buffer[10] = (beta >> 8) & 0xff;
+				  break;	
+				case 0x0F:
+					epsilon = 0;
+					beta = 0;
+					UART_field_buffer[7] = epsilon & 0xff;
+					UART_field_buffer[8] = (epsilon >> 8) & 0xff;
+					UART_field_buffer[9] = beta & 0xff;
+					UART_field_buffer[10] = (beta >> 8) & 0xff;
+				  break;
+				case 0x10:
+					epsilon = 0;
+					beta = 0;
+					UART_field_buffer[7] = epsilon & 0xff;
+					UART_field_buffer[8] = (epsilon >> 8) & 0xff;
+					UART_field_buffer[9] = beta & 0xff;
+					UART_field_buffer[10] = (beta >> 8) & 0xff;
+				  break;
+				case 0x11:
+					epsilon = 0;
+					beta = 0;
+					UART_field_buffer[7] = epsilon & 0xff;
+					UART_field_buffer[8] = (epsilon >> 8) & 0xff;
+					UART_field_buffer[9] = beta & 0xff;
+					UART_field_buffer[10] = (beta >> 8) & 0xff;
+				  break;	
+				case 0x12:
+					epsilon = -1322;
+					beta = 0;
+					UART_field_buffer[7] = epsilon & 0xff;
+					UART_field_buffer[8] = (epsilon >> 8) & 0xff;
+					UART_field_buffer[9] = beta & 0xff;
+					UART_field_buffer[10] = (beta >> 8) & 0xff;
+				  break;
+				case 0x013:
+					epsilon = 1322;
+					beta = 0;
+					UART_field_buffer[7] = epsilon & 0xff;
+					UART_field_buffer[8] = (epsilon >> 8) & 0xff;
+					UART_field_buffer[9] = beta & 0xff;
+					UART_field_buffer[10] = (beta >> 8) & 0xff;
+				  break;
+				case 0x014:
+					epsilon = 0;
+					beta = 1322;
+					UART_field_buffer[7] = epsilon & 0xff;
+					UART_field_buffer[8] = (epsilon >> 8) & 0xff;
+					UART_field_buffer[9] = beta & 0xff;
+					UART_field_buffer[10] = (beta >> 8) & 0xff;
+				  break;
+				case 0x15:
+					epsilon = 0;
+					beta = -1322;
+					UART_field_buffer[7] = epsilon & 0xff;
+					UART_field_buffer[8] = (epsilon >> 8) & 0xff;
+					UART_field_buffer[9] = beta & 0xff;
+					UART_field_buffer[10] = (beta >> 8) & 0xff;
+				  break;
+				case 0x16:
+					epsilon = -1322;
+					beta = 0;
+					UART_field_buffer[7] = epsilon & 0xff;
+					UART_field_buffer[8] = (epsilon >> 8) & 0xff;
+					UART_field_buffer[9] = beta & 0xff;
+					UART_field_buffer[10] = (beta >> 8) & 0xff;
+				  break;
+				case 0x17:
+					epsilon = 1322;
+					beta = 0;
+					UART_field_buffer[7] = epsilon & 0xff;
+					UART_field_buffer[8] = (epsilon >> 8) & 0xff;
+					UART_field_buffer[9] = beta & 0xff;
+					UART_field_buffer[10] = (beta >> 8) & 0xff;
+				  break;	
+				case 0x18:
+					epsilon = 0;
+					beta = 1322;
+					UART_field_buffer[7] = epsilon & 0xff;
+					UART_field_buffer[8] = (epsilon >> 8) & 0xff;
+					UART_field_buffer[9] = beta & 0xff;
+					UART_field_buffer[10] = (beta >> 8) & 0xff;
+				  break;
+				case 0x19:
+					epsilon = 0;
+					beta = -1322;
+					UART_field_buffer[7] = epsilon & 0xff;
+					UART_field_buffer[8] = (epsilon >> 8) & 0xff;
+					UART_field_buffer[9] = beta & 0xff;
+					UART_field_buffer[10] = (beta >> 8) & 0xff;
+				  break;
+				case 0x1A:
+					epsilon = 16383;
+					beta = -81;
+					UART_field_buffer[7] = epsilon & 0xff;
+					UART_field_buffer[8] = (epsilon >> 8) & 0xff;
+					UART_field_buffer[9] = beta & 0xff;
+					UART_field_buffer[10] = (beta >> 8) & 0xff;
+				  break;
+				case 0x1B:
+					epsilon = 16383;
+					beta = -81;
+					UART_field_buffer[7] = epsilon & 0xff;
+					UART_field_buffer[8] = (epsilon >> 8) & 0xff;
+					UART_field_buffer[9] = beta & 0xff;
+					UART_field_buffer[10] = (beta >> 8) & 0xff;
+				  break;
+				case 0x20:
+				  break;
+				case 0x21:
+				  break;
+				case 0x22:
+				  break;
+				case 0x23:
+				  break;
+				case 0x24:
+				  break;					
+				default:
+					UART_field_buffer[7] = 0;
+					UART_field_buffer[8] = 0;
+					UART_field_buffer[9] = 0;
+					UART_field_buffer[10] = 0;
+					break;
+			}
+			UART_field_buffer[11] = 0x00;
+			UART_field_buffer[12] = 2;
+			UART_field_buffer[13] = 0x00;
+			frame_verify = UART_field_buffer[2] + UART_field_buffer[3] + UART_field_buffer[4] + UART_field_buffer[5] + \
+										 UART_field_buffer[6] + UART_field_buffer[7] + UART_field_buffer[8] + UART_field_buffer[9] + \
+										 UART_field_buffer[10] + UART_field_buffer[11] + UART_field_buffer[12] + UART_field_buffer[13];
+			UART_field_buffer[14] = frame_verify & 0xff;
+			UART_field_buffer[15] = 0x86;
+			HAL_UART_Transmit_DMA(&huart1, (uint8_t *)&UART_field_buffer, 16);   //choose uart line
+		}
+		vTaskDelay(20 * portTICK_RATE_MS);
+	} while(xSemaphoreTake( uart_A1_xSemaphore, 0) != pdTRUE);
+}
+
 void HAL_UART_RxCpltCallback(UART_HandleTypeDef *UartHandle)
 {
+	 portBASE_TYPE uart_xHigherPriorityTaskWoken;
 	 if(UartHandle->Instance==USART1){
 			HAL_UART_Receive_IT(&huart1, (uint8_t*) &ch, 1); 		//write ch
 			//cnt = 0 of cnt != 0
