@@ -25,7 +25,7 @@
 /* USER CODE BEGIN Includes */
 
 /* USER CODE END Includes */
-
+#define FIELD_TASK_PRIO    ( tskIDLE_PRIORITY + 1 )
 /* Private typedef -----------------------------------------------------------*/
 /* USER CODE BEGIN PTD */
 
@@ -97,6 +97,9 @@ const osThreadAttr_t field_attributes = {
   .stack_size = 128 * 4
 };
 /* USER CODE END PV */
+
+xTaskHandle field_xHandle = NULL;
+
 
 /* Private function prototypes -----------------------------------------------*/
 void SystemClock_Config(void);
@@ -748,19 +751,61 @@ HAL_StatusTypeDef process_command (void)
 			return HAL_OK;
 		
 		case 0x02:
-			HAL_TIM_PWM_Stop(&htim3, TIM_CHANNEL_1);
+			if( FieldHandle != NULL ) {
+				osThreadTerminate( FieldHandle );
+			}
 			__HAL_TIM_SET_AUTORELOAD(&htim3, 1333 - 1);
 			__HAL_TIM_SET_COMPARE(&htim3, TIM_CHANNEL_1, 100 - 1);
-			HAL_TIM_PWM_Start(&htim3, TIM_CHANNEL_1);
+			HAL_TIM_PWM_Stop(&htim3, TIM_CHANNEL_1);
 	//				pwm_count = 0;
 
 		//config DO6/7/9/10/11/12
 			HAL_GPIO_WritePin(GPIOA, GPIO_PIN_15, GPIO_PIN_SET);
 			HAL_GPIO_WritePin(GPIOE, GPIO_PIN_0| GPIO_PIN_1| GPIO_PIN_3| GPIO_PIN_4, GPIO_PIN_SET);
 			HAL_GPIO_WritePin(GPIOE, GPIO_PIN_5, GPIO_PIN_RESET);
+		
+			if (xSemaphoreTake( uart_A1_xSemaphore, 10000) == pdTRUE) {
+					// hand shake
+					// fill buffer as in tab3B1
+					// function start: repeated code of hand shake sent tab3B1
+					UART_send_buffer[0] = 0xA6;
+					UART_send_buffer[1] = 0x0D;
+					UART_send_buffer[2] = 0xAA;
+					//https://zhidao.baidu.com/question/1638675882443131580.html?qbpn=2_2&tx=&word=%E4%BB%8E%E4%B8%80%E4%B8%AA16%E4%BD%8D%E5%8F%98%E9%87%8F%E4%B8%AD%E5%8F%96%E5%87%BA%E9%AB%988%E4%BD%8D%E5%92%8C%E4%BD%8E8%E4%BD%8D%EF%BC%8C%E6%B1%82C%E8%AF%AD%E8%A8%80%E7%A8%8B%E5%BA%8F%EF%BC%9F&fr=newsearchlist
+					code_verify = (UART_recv_buffer[3] + UART_recv_buffer[4]) * UART_recv_buffer[5];
+					UART_send_buffer[3] = code_verify & 0xff;
+					UART_send_buffer[4] = (code_verify >> 8) & 0xff;
+					UART_send_buffer[5] = (code_verify >> 16) & 0xff;
+					UART_send_buffer[6] = (code_verify >> 24) & 0xff;
+					UART_send_buffer[7] = 0x0B;
+					UART_send_buffer[8] = 0x00;
+					UART_send_buffer[9] = 0x00;
+					UART_send_buffer[10] = 0x00;
+					UART_send_buffer[11] = 0x00;
+					frame_verify = UART_send_buffer[2] + UART_send_buffer[3] + UART_send_buffer[4] + UART_send_buffer[5] + \
+											   UART_send_buffer[6] + UART_send_buffer[7] + UART_send_buffer[8] + UART_send_buffer[9] + \
+												 UART_send_buffer[10];
+					UART_send_buffer[12] = frame_verify & 0xff;
+					UART_send_buffer[13] = 0x86;
+					
+					// send buffer
+					HAL_UART_Transmit_DMA(&huart1, (uint8_t *)&UART_send_buffer, 13);   //choose uart line
+					
+					if (xSemaphoreTake( exti_xSemaphore, 10000) == pdTRUE) {
+						time_origin = xTaskGetTickCount() * portTICK_RATE_MS;
+						FieldHandle = osThreadNew(field_task, NULL, &field_attributes);
+//						xTaskCreate(field_task, "FIELD", configMINIMAL_STACK_SIZE * 4, NULL, FIELD_TASK_PRIO, &field_xHandle);
+					}
+					else {
+						//error message
+					}
+			}
 			return HAL_OK;
 		
 		case 0x03:
+			if( FieldHandle != NULL ) {
+				osThreadTerminate( FieldHandle );
+			}
 			__HAL_TIM_SET_AUTORELOAD(&htim3, 1333 - 1);
 			__HAL_TIM_SET_COMPARE(&htim3, TIM_CHANNEL_1, 100 - 1);
 			HAL_TIM_PWM_Stop(&htim3, TIM_CHANNEL_1);
@@ -770,9 +815,49 @@ HAL_StatusTypeDef process_command (void)
 			HAL_GPIO_WritePin(GPIOA, GPIO_PIN_15, GPIO_PIN_SET);
 			HAL_GPIO_WritePin(GPIOE, GPIO_PIN_0| GPIO_PIN_4|GPIO_PIN_5, GPIO_PIN_SET);
 			HAL_GPIO_WritePin(GPIOE,  GPIO_PIN_1| GPIO_PIN_3, GPIO_PIN_RESET);
+
+			if (xSemaphoreTake( uart_A1_xSemaphore,10000) == pdTRUE) {
+					// hand shake
+					// fill buffer as in tab3B1
+					// function start: repeated code of hand shake sent tab3B1
+					UART_send_buffer[0] = 0xA6;
+					UART_send_buffer[1] = 0x0D;
+					UART_send_buffer[2] = 0xAA;
+					//https://zhidao.baidu.com/question/1638675882443131580.html?qbpn=2_2&tx=&word=%E4%BB%8E%E4%B8%80%E4%B8%AA16%E4%BD%8D%E5%8F%98%E9%87%8F%E4%B8%AD%E5%8F%96%E5%87%BA%E9%AB%988%E4%BD%8D%E5%92%8C%E4%BD%8E8%E4%BD%8D%EF%BC%8C%E6%B1%82C%E8%AF%AD%E8%A8%80%E7%A8%8B%E5%BA%8F%EF%BC%9F&fr=newsearchlist
+					code_verify = (UART_recv_buffer[3] + UART_recv_buffer[4]) * UART_recv_buffer[5];
+					UART_send_buffer[3] = code_verify & 0xff;
+					UART_send_buffer[4] = (code_verify >> 8) & 0xff;
+					UART_send_buffer[5] = (code_verify >> 16) & 0xff;
+					UART_send_buffer[6] = (code_verify >> 24) & 0xff;
+					UART_send_buffer[7] = 0x0B;
+					UART_send_buffer[8] = 0x00;
+					UART_send_buffer[9] = 0x00;
+					UART_send_buffer[10] = 0x00;
+					UART_send_buffer[11] = 0x00;
+					frame_verify = UART_send_buffer[2] + UART_send_buffer[3] + UART_send_buffer[4] + UART_send_buffer[5] + \
+											   UART_send_buffer[6] + UART_send_buffer[7] + UART_send_buffer[8] + UART_send_buffer[9] + \
+												 UART_send_buffer[10];
+					UART_send_buffer[12] = frame_verify & 0xff;
+					UART_send_buffer[13] = 0x86;
+					
+					// send buffer
+					HAL_UART_Transmit_DMA(&huart1, (uint8_t *)&UART_send_buffer, 13);   //choose uart line
+					
+					if (xSemaphoreTake( exti_xSemaphore, 10000) == pdTRUE) {
+						time_origin = xTaskGetTickCount() * portTICK_RATE_MS;
+						FieldHandle = osThreadNew(field_task, NULL, &field_attributes);
+						xTaskCreate(field_task, "FIELD", configMINIMAL_STACK_SIZE * 4, NULL, FIELD_TASK_PRIO, &field_xHandle);
+					}
+					else {
+						//error message
+					}
+			}
 			return HAL_OK;
 
 		case 0x04:
+			if( FieldHandle != NULL ) {
+				osThreadTerminate( FieldHandle );
+			}
 			__HAL_TIM_SET_AUTORELOAD(&htim3, 1333 - 1);
 			__HAL_TIM_SET_COMPARE(&htim3, TIM_CHANNEL_1, 100 - 1);
 			HAL_TIM_PWM_Stop(&htim3, TIM_CHANNEL_1);
@@ -782,9 +867,50 @@ HAL_StatusTypeDef process_command (void)
 			HAL_GPIO_WritePin(GPIOA, GPIO_PIN_15, GPIO_PIN_SET);
 			HAL_GPIO_WritePin(GPIOE, GPIO_PIN_0|  GPIO_PIN_3|GPIO_PIN_4|GPIO_PIN_5, GPIO_PIN_SET);
 			HAL_GPIO_WritePin(GPIOE,  GPIO_PIN_1, GPIO_PIN_RESET);
+		
+			if (xSemaphoreTake( uart_A1_xSemaphore,10000) == pdTRUE) {
+					// hand shake
+					// fill buffer as in tab3B1
+					// function start: repeated code of hand shake sent tab3B1
+					UART_send_buffer[0] = 0xA6;
+					UART_send_buffer[1] = 0x0D;
+					UART_send_buffer[2] = 0xAA;
+					//https://zhidao.baidu.com/question/1638675882443131580.html?qbpn=2_2&tx=&word=%E4%BB%8E%E4%B8%80%E4%B8%AA16%E4%BD%8D%E5%8F%98%E9%87%8F%E4%B8%AD%E5%8F%96%E5%87%BA%E9%AB%988%E4%BD%8D%E5%92%8C%E4%BD%8E8%E4%BD%8D%EF%BC%8C%E6%B1%82C%E8%AF%AD%E8%A8%80%E7%A8%8B%E5%BA%8F%EF%BC%9F&fr=newsearchlist
+					code_verify = (UART_recv_buffer[3] + UART_recv_buffer[4]) * UART_recv_buffer[5];
+					UART_send_buffer[3] = code_verify & 0xff;
+					UART_send_buffer[4] = (code_verify >> 8) & 0xff;
+					UART_send_buffer[5] = (code_verify >> 16) & 0xff;
+					UART_send_buffer[6] = (code_verify >> 24) & 0xff;
+					UART_send_buffer[7] = 0x0B;
+					UART_send_buffer[8] = 0x00;
+					UART_send_buffer[9] = 0x00;
+					UART_send_buffer[10] = 0x00;
+					UART_send_buffer[11] = 0x00;
+					frame_verify = UART_send_buffer[2] + UART_send_buffer[3] + UART_send_buffer[4] + UART_send_buffer[5] + \
+											   UART_send_buffer[6] + UART_send_buffer[7] + UART_send_buffer[8] + UART_send_buffer[9] + \
+												 UART_send_buffer[10];
+					UART_send_buffer[12] = frame_verify & 0xff;
+					UART_send_buffer[13] = 0x86;
+					
+					// send buffer
+					HAL_UART_Transmit_DMA(&huart1, (uint8_t *)&UART_send_buffer, 13);   //choose uart line
+					
+					if (xSemaphoreTake( exti_xSemaphore, 10000) == pdTRUE) {
+						time_origin = xTaskGetTickCount() * portTICK_RATE_MS;
+						FieldHandle = osThreadNew(field_task, NULL, &field_attributes);
+						xTaskCreate(field_task, "FIELD", configMINIMAL_STACK_SIZE * 4, NULL, FIELD_TASK_PRIO, &field_xHandle);
+					}
+					else {
+						//error message
+					}
+			}
+
 			return HAL_OK;
 
 		case 0x05:
+			if( FieldHandle != NULL ) {
+				osThreadTerminate( FieldHandle );
+			}
 			__HAL_TIM_SET_AUTORELOAD(&htim3, 1333 - 1);
 			__HAL_TIM_SET_COMPARE(&htim3, TIM_CHANNEL_1, 100 - 1);
 			HAL_TIM_PWM_Stop(&htim3, TIM_CHANNEL_1);
@@ -794,9 +920,50 @@ HAL_StatusTypeDef process_command (void)
 			HAL_GPIO_WritePin(GPIOA, GPIO_PIN_15, GPIO_PIN_SET);
 			HAL_GPIO_WritePin(GPIOE, GPIO_PIN_0|  GPIO_PIN_3|GPIO_PIN_5, GPIO_PIN_SET);
 			HAL_GPIO_WritePin(GPIOE,  GPIO_PIN_1|GPIO_PIN_4, GPIO_PIN_RESET);
+
+			if (xSemaphoreTake( uart_A1_xSemaphore,10000) == pdTRUE) {
+					// hand shake
+					// fill buffer as in tab3B1
+					// function start: repeated code of hand shake sent tab3B1
+					UART_send_buffer[0] = 0xA6;
+					UART_send_buffer[1] = 0x0D;
+					UART_send_buffer[2] = 0xAA;
+					//https://zhidao.baidu.com/question/1638675882443131580.html?qbpn=2_2&tx=&word=%E4%BB%8E%E4%B8%80%E4%B8%AA16%E4%BD%8D%E5%8F%98%E9%87%8F%E4%B8%AD%E5%8F%96%E5%87%BA%E9%AB%988%E4%BD%8D%E5%92%8C%E4%BD%8E8%E4%BD%8D%EF%BC%8C%E6%B1%82C%E8%AF%AD%E8%A8%80%E7%A8%8B%E5%BA%8F%EF%BC%9F&fr=newsearchlist
+					code_verify = (UART_recv_buffer[3] + UART_recv_buffer[4]) * UART_recv_buffer[5];
+					UART_send_buffer[3] = code_verify & 0xff;
+					UART_send_buffer[4] = (code_verify >> 8) & 0xff;
+					UART_send_buffer[5] = (code_verify >> 16) & 0xff;
+					UART_send_buffer[6] = (code_verify >> 24) & 0xff;
+					UART_send_buffer[7] = 0x0B;
+					UART_send_buffer[8] = 0x00;
+					UART_send_buffer[9] = 0x00;
+					UART_send_buffer[10] = 0x00;
+					UART_send_buffer[11] = 0x00;
+					frame_verify = UART_send_buffer[2] + UART_send_buffer[3] + UART_send_buffer[4] + UART_send_buffer[5] + \
+											   UART_send_buffer[6] + UART_send_buffer[7] + UART_send_buffer[8] + UART_send_buffer[9] + \
+												 UART_send_buffer[10];
+					UART_send_buffer[12] = frame_verify & 0xff;
+					UART_send_buffer[13] = 0x86;
+					
+					// send buffer
+					HAL_UART_Transmit_DMA(&huart1, (uint8_t *)&UART_send_buffer, 13);   //choose uart line
+					
+					if (xSemaphoreTake( exti_xSemaphore, 10000) == pdTRUE) {
+						time_origin = xTaskGetTickCount() * portTICK_RATE_MS;
+						FieldHandle = osThreadNew(field_task, NULL, &field_attributes);
+						xTaskCreate(field_task, "FIELD", configMINIMAL_STACK_SIZE * 4, NULL, FIELD_TASK_PRIO, &field_xHandle);
+					}
+					else {
+						//error message
+					}
+			}
+
 			return HAL_OK;	
 
 		case 0x06:
+			if( FieldHandle != NULL ) {
+				osThreadTerminate( FieldHandle );
+			}
 			__HAL_TIM_SET_AUTORELOAD(&htim3, 1500 - 1);
 			__HAL_TIM_SET_COMPARE(&htim3, TIM_CHANNEL_1, 100 - 1);
 			HAL_TIM_PWM_Stop(&htim3, TIM_CHANNEL_1);
@@ -806,9 +973,50 @@ HAL_StatusTypeDef process_command (void)
 			HAL_GPIO_WritePin(GPIOA, GPIO_PIN_15, GPIO_PIN_SET);
 			HAL_GPIO_WritePin(GPIOE, GPIO_PIN_0|  GPIO_PIN_4|GPIO_PIN_5, GPIO_PIN_SET);
 			HAL_GPIO_WritePin(GPIOE,  GPIO_PIN_1|GPIO_PIN_3, GPIO_PIN_RESET);
+
+			if (xSemaphoreTake( uart_A1_xSemaphore,10000) == pdTRUE) {
+					// hand shake
+					// fill buffer as in tab3B1
+					// function start: repeated code of hand shake sent tab3B1
+					UART_send_buffer[0] = 0xA6;
+					UART_send_buffer[1] = 0x0D;
+					UART_send_buffer[2] = 0xAA;
+					//https://zhidao.baidu.com/question/1638675882443131580.html?qbpn=2_2&tx=&word=%E4%BB%8E%E4%B8%80%E4%B8%AA16%E4%BD%8D%E5%8F%98%E9%87%8F%E4%B8%AD%E5%8F%96%E5%87%BA%E9%AB%988%E4%BD%8D%E5%92%8C%E4%BD%8E8%E4%BD%8D%EF%BC%8C%E6%B1%82C%E8%AF%AD%E8%A8%80%E7%A8%8B%E5%BA%8F%EF%BC%9F&fr=newsearchlist
+					code_verify = (UART_recv_buffer[3] + UART_recv_buffer[4]) * UART_recv_buffer[5];
+					UART_send_buffer[3] = code_verify & 0xff;
+					UART_send_buffer[4] = (code_verify >> 8) & 0xff;
+					UART_send_buffer[5] = (code_verify >> 16) & 0xff;
+					UART_send_buffer[6] = (code_verify >> 24) & 0xff;
+					UART_send_buffer[7] = 0x0B;
+					UART_send_buffer[8] = 0x00;
+					UART_send_buffer[9] = 0x00;
+					UART_send_buffer[10] = 0x00;
+					UART_send_buffer[11] = 0x00;
+					frame_verify = UART_send_buffer[2] + UART_send_buffer[3] + UART_send_buffer[4] + UART_send_buffer[5] + \
+											   UART_send_buffer[6] + UART_send_buffer[7] + UART_send_buffer[8] + UART_send_buffer[9] + \
+												 UART_send_buffer[10];
+					UART_send_buffer[12] = frame_verify & 0xff;
+					UART_send_buffer[13] = 0x86;
+					
+					// send buffer
+					HAL_UART_Transmit_DMA(&huart1, (uint8_t *)&UART_send_buffer, 13);   //choose uart line
+					
+					if (xSemaphoreTake( exti_xSemaphore, 10000) == pdTRUE) {
+						time_origin = xTaskGetTickCount() * portTICK_RATE_MS;
+						FieldHandle = osThreadNew(field_task, NULL, &field_attributes);
+						xTaskCreate(field_task, "FIELD", configMINIMAL_STACK_SIZE * 4, NULL, FIELD_TASK_PRIO, &field_xHandle);
+					}
+					else {
+						//error message
+					}
+			}
+
 			return HAL_OK;	
 
 		case 0x07:
+			if( FieldHandle != NULL ) {
+				osThreadTerminate( FieldHandle );
+			}
 			__HAL_TIM_SET_AUTORELOAD(&htim3, 1500 - 1);
 			__HAL_TIM_SET_COMPARE(&htim3, TIM_CHANNEL_1, 100 - 1);
 			HAL_TIM_PWM_Stop(&htim3, TIM_CHANNEL_1);
@@ -818,9 +1026,50 @@ HAL_StatusTypeDef process_command (void)
 			HAL_GPIO_WritePin(GPIOA, GPIO_PIN_15, GPIO_PIN_SET);
 			HAL_GPIO_WritePin(GPIOE, GPIO_PIN_0|  GPIO_PIN_4|GPIO_PIN_5, GPIO_PIN_SET);
 			HAL_GPIO_WritePin(GPIOE,  GPIO_PIN_1|GPIO_PIN_3, GPIO_PIN_RESET);
+		
+			if (xSemaphoreTake( uart_A1_xSemaphore,10000) == pdTRUE) {
+					// hand shake
+					// fill buffer as in tab3B1
+					// function start: repeated code of hand shake sent tab3B1
+					UART_send_buffer[0] = 0xA6;
+					UART_send_buffer[1] = 0x0D;
+					UART_send_buffer[2] = 0xAA;
+					//https://zhidao.baidu.com/question/1638675882443131580.html?qbpn=2_2&tx=&word=%E4%BB%8E%E4%B8%80%E4%B8%AA16%E4%BD%8D%E5%8F%98%E9%87%8F%E4%B8%AD%E5%8F%96%E5%87%BA%E9%AB%988%E4%BD%8D%E5%92%8C%E4%BD%8E8%E4%BD%8D%EF%BC%8C%E6%B1%82C%E8%AF%AD%E8%A8%80%E7%A8%8B%E5%BA%8F%EF%BC%9F&fr=newsearchlist
+					code_verify = (UART_recv_buffer[3] + UART_recv_buffer[4]) * UART_recv_buffer[5];
+					UART_send_buffer[3] = code_verify & 0xff;
+					UART_send_buffer[4] = (code_verify >> 8) & 0xff;
+					UART_send_buffer[5] = (code_verify >> 16) & 0xff;
+					UART_send_buffer[6] = (code_verify >> 24) & 0xff;
+					UART_send_buffer[7] = 0x0B;
+					UART_send_buffer[8] = 0x00;
+					UART_send_buffer[9] = 0x00;
+					UART_send_buffer[10] = 0x00;
+					UART_send_buffer[11] = 0x00;
+					frame_verify = UART_send_buffer[2] + UART_send_buffer[3] + UART_send_buffer[4] + UART_send_buffer[5] + \
+											   UART_send_buffer[6] + UART_send_buffer[7] + UART_send_buffer[8] + UART_send_buffer[9] + \
+												 UART_send_buffer[10];
+					UART_send_buffer[12] = frame_verify & 0xff;
+					UART_send_buffer[13] = 0x86;
+					
+					// send buffer
+					HAL_UART_Transmit_DMA(&huart1, (uint8_t *)&UART_send_buffer, 13);   //choose uart line
+					
+					if (xSemaphoreTake( exti_xSemaphore, 10000) == pdTRUE) {
+						time_origin = xTaskGetTickCount() * portTICK_RATE_MS;
+						FieldHandle = osThreadNew(field_task, NULL, &field_attributes);
+						xTaskCreate(field_task, "FIELD", configMINIMAL_STACK_SIZE * 4, NULL, FIELD_TASK_PRIO, &field_xHandle);
+					}
+					else {
+						//error message
+					}
+			}
+
 			return HAL_OK;
 
 		case 0x08:
+			if( FieldHandle != NULL ) {
+				osThreadTerminate( FieldHandle );
+			}
 			__HAL_TIM_SET_AUTORELOAD(&htim3, 1500 - 1);
 			__HAL_TIM_SET_COMPARE(&htim3, TIM_CHANNEL_1, 100 - 1);
 			HAL_TIM_PWM_Stop(&htim3, TIM_CHANNEL_1);
@@ -830,9 +1079,50 @@ HAL_StatusTypeDef process_command (void)
 			HAL_GPIO_WritePin(GPIOA, GPIO_PIN_15, GPIO_PIN_SET);
 			HAL_GPIO_WritePin(GPIOE, GPIO_PIN_0|  GPIO_PIN_4|GPIO_PIN_5, GPIO_PIN_SET);
 			HAL_GPIO_WritePin(GPIOE,  GPIO_PIN_1|GPIO_PIN_3, GPIO_PIN_RESET);
+
+			if (xSemaphoreTake( uart_A1_xSemaphore,10000) == pdTRUE) {
+					// hand shake
+					// fill buffer as in tab3B1
+					// function start: repeated code of hand shake sent tab3B1
+					UART_send_buffer[0] = 0xA6;
+					UART_send_buffer[1] = 0x0D;
+					UART_send_buffer[2] = 0xAA;
+					//https://zhidao.baidu.com/question/1638675882443131580.html?qbpn=2_2&tx=&word=%E4%BB%8E%E4%B8%80%E4%B8%AA16%E4%BD%8D%E5%8F%98%E9%87%8F%E4%B8%AD%E5%8F%96%E5%87%BA%E9%AB%988%E4%BD%8D%E5%92%8C%E4%BD%8E8%E4%BD%8D%EF%BC%8C%E6%B1%82C%E8%AF%AD%E8%A8%80%E7%A8%8B%E5%BA%8F%EF%BC%9F&fr=newsearchlist
+					code_verify = (UART_recv_buffer[3] + UART_recv_buffer[4]) * UART_recv_buffer[5];
+					UART_send_buffer[3] = code_verify & 0xff;
+					UART_send_buffer[4] = (code_verify >> 8) & 0xff;
+					UART_send_buffer[5] = (code_verify >> 16) & 0xff;
+					UART_send_buffer[6] = (code_verify >> 24) & 0xff;
+					UART_send_buffer[7] = 0x0B;
+					UART_send_buffer[8] = 0x00;
+					UART_send_buffer[9] = 0x00;
+					UART_send_buffer[10] = 0x00;
+					UART_send_buffer[11] = 0x00;
+					frame_verify = UART_send_buffer[2] + UART_send_buffer[3] + UART_send_buffer[4] + UART_send_buffer[5] + \
+											   UART_send_buffer[6] + UART_send_buffer[7] + UART_send_buffer[8] + UART_send_buffer[9] + \
+												 UART_send_buffer[10];
+					UART_send_buffer[12] = frame_verify & 0xff;
+					UART_send_buffer[13] = 0x86;
+					
+					// send buffer
+					HAL_UART_Transmit_DMA(&huart1, (uint8_t *)&UART_send_buffer, 13);   //choose uart line
+					
+					if (xSemaphoreTake( exti_xSemaphore, 10000) == pdTRUE) {
+						time_origin = xTaskGetTickCount() * portTICK_RATE_MS;
+						FieldHandle = osThreadNew(field_task, NULL, &field_attributes);
+						xTaskCreate(field_task, "FIELD", configMINIMAL_STACK_SIZE * 4, NULL, FIELD_TASK_PRIO, &field_xHandle);
+					}
+					else {
+						//error message
+					}
+			}
+
 			return HAL_OK;	
 
 		case 0x09:
+			if( FieldHandle != NULL ) {
+				osThreadTerminate( FieldHandle );
+			}
 			__HAL_TIM_SET_AUTORELOAD(&htim3, 1500 - 1);
 			__HAL_TIM_SET_COMPARE(&htim3, TIM_CHANNEL_1, 100 - 1);
 			HAL_TIM_PWM_Stop(&htim3, TIM_CHANNEL_1);
@@ -842,9 +1132,50 @@ HAL_StatusTypeDef process_command (void)
 			HAL_GPIO_WritePin(GPIOA, GPIO_PIN_15, GPIO_PIN_SET);
 			HAL_GPIO_WritePin(GPIOE, GPIO_PIN_0|  GPIO_PIN_4|GPIO_PIN_5, GPIO_PIN_SET);
 			HAL_GPIO_WritePin(GPIOE,  GPIO_PIN_1|GPIO_PIN_3, GPIO_PIN_RESET);
+		
+			if (xSemaphoreTake( uart_A1_xSemaphore,10000) == pdTRUE) {
+					// hand shake
+					// fill buffer as in tab3B1
+					// function start: repeated code of hand shake sent tab3B1
+					UART_send_buffer[0] = 0xA6;
+					UART_send_buffer[1] = 0x0D;
+					UART_send_buffer[2] = 0xAA;
+					//https://zhidao.baidu.com/question/1638675882443131580.html?qbpn=2_2&tx=&word=%E4%BB%8E%E4%B8%80%E4%B8%AA16%E4%BD%8D%E5%8F%98%E9%87%8F%E4%B8%AD%E5%8F%96%E5%87%BA%E9%AB%988%E4%BD%8D%E5%92%8C%E4%BD%8E8%E4%BD%8D%EF%BC%8C%E6%B1%82C%E8%AF%AD%E8%A8%80%E7%A8%8B%E5%BA%8F%EF%BC%9F&fr=newsearchlist
+					code_verify = (UART_recv_buffer[3] + UART_recv_buffer[4]) * UART_recv_buffer[5];
+					UART_send_buffer[3] = code_verify & 0xff;
+					UART_send_buffer[4] = (code_verify >> 8) & 0xff;
+					UART_send_buffer[5] = (code_verify >> 16) & 0xff;
+					UART_send_buffer[6] = (code_verify >> 24) & 0xff;
+					UART_send_buffer[7] = 0x0B;
+					UART_send_buffer[8] = 0x00;
+					UART_send_buffer[9] = 0x00;
+					UART_send_buffer[10] = 0x00;
+					UART_send_buffer[11] = 0x00;
+					frame_verify = UART_send_buffer[2] + UART_send_buffer[3] + UART_send_buffer[4] + UART_send_buffer[5] + \
+											   UART_send_buffer[6] + UART_send_buffer[7] + UART_send_buffer[8] + UART_send_buffer[9] + \
+												 UART_send_buffer[10];
+					UART_send_buffer[12] = frame_verify & 0xff;
+					UART_send_buffer[13] = 0x86;
+					
+					// send buffer
+					HAL_UART_Transmit_DMA(&huart1, (uint8_t *)&UART_send_buffer, 13);   //choose uart line
+					
+					if (xSemaphoreTake( exti_xSemaphore, 10000) == pdTRUE) {
+						time_origin = xTaskGetTickCount() * portTICK_RATE_MS;
+						FieldHandle = osThreadNew(field_task, NULL, &field_attributes);
+						xTaskCreate(field_task, "FIELD", configMINIMAL_STACK_SIZE * 4, NULL, FIELD_TASK_PRIO, &field_xHandle);
+					}
+					else {
+						//error message
+					}
+			}
+
 			return HAL_OK;	
 
 		case 0x0A:
+			if( FieldHandle != NULL ) {
+				osThreadTerminate( FieldHandle );
+			}
 			__HAL_TIM_SET_AUTORELOAD(&htim3, 1400 - 1);
 			__HAL_TIM_SET_COMPARE(&htim3, TIM_CHANNEL_1, 100 - 1);
 			HAL_TIM_PWM_Stop(&htim3, TIM_CHANNEL_1);
@@ -854,9 +1185,50 @@ HAL_StatusTypeDef process_command (void)
 			HAL_GPIO_WritePin(GPIOA, GPIO_PIN_15, GPIO_PIN_SET);
 			HAL_GPIO_WritePin(GPIOE, GPIO_PIN_0| GPIO_PIN_3 |GPIO_PIN_4|GPIO_PIN_5, GPIO_PIN_SET);
 			HAL_GPIO_WritePin(GPIOE,  GPIO_PIN_1, GPIO_PIN_RESET);
+		
+			if (xSemaphoreTake( uart_A1_xSemaphore,10000) == pdTRUE) {
+					// hand shake
+					// fill buffer as in tab3B1
+					// function start: repeated code of hand shake sent tab3B1
+					UART_send_buffer[0] = 0xA6;
+					UART_send_buffer[1] = 0x0D;
+					UART_send_buffer[2] = 0xAA;
+					//https://zhidao.baidu.com/question/1638675882443131580.html?qbpn=2_2&tx=&word=%E4%BB%8E%E4%B8%80%E4%B8%AA16%E4%BD%8D%E5%8F%98%E9%87%8F%E4%B8%AD%E5%8F%96%E5%87%BA%E9%AB%988%E4%BD%8D%E5%92%8C%E4%BD%8E8%E4%BD%8D%EF%BC%8C%E6%B1%82C%E8%AF%AD%E8%A8%80%E7%A8%8B%E5%BA%8F%EF%BC%9F&fr=newsearchlist
+					code_verify = (UART_recv_buffer[3] + UART_recv_buffer[4]) * UART_recv_buffer[5];
+					UART_send_buffer[3] = code_verify & 0xff;
+					UART_send_buffer[4] = (code_verify >> 8) & 0xff;
+					UART_send_buffer[5] = (code_verify >> 16) & 0xff;
+					UART_send_buffer[6] = (code_verify >> 24) & 0xff;
+					UART_send_buffer[7] = 0x0B;
+					UART_send_buffer[8] = 0x00;
+					UART_send_buffer[9] = 0x00;
+					UART_send_buffer[10] = 0x00;
+					UART_send_buffer[11] = 0x00;
+					frame_verify = UART_send_buffer[2] + UART_send_buffer[3] + UART_send_buffer[4] + UART_send_buffer[5] + \
+											   UART_send_buffer[6] + UART_send_buffer[7] + UART_send_buffer[8] + UART_send_buffer[9] + \
+												 UART_send_buffer[10];
+					UART_send_buffer[12] = frame_verify & 0xff;
+					UART_send_buffer[13] = 0x86;
+					
+					// send buffer
+					HAL_UART_Transmit_DMA(&huart1, (uint8_t *)&UART_send_buffer, 13);   //choose uart line
+					
+					if (xSemaphoreTake( exti_xSemaphore, 10000) == pdTRUE) {
+						time_origin = xTaskGetTickCount() * portTICK_RATE_MS;
+						FieldHandle = osThreadNew(field_task, NULL, &field_attributes);
+						xTaskCreate(field_task, "FIELD", configMINIMAL_STACK_SIZE * 4, NULL, FIELD_TASK_PRIO, &field_xHandle);
+					}
+					else {
+						//error message
+					}
+			}
+
 			return HAL_OK;		
 
 		case 0x0B:
+			if( FieldHandle != NULL ) {
+				osThreadTerminate( FieldHandle );
+			}
 			__HAL_TIM_SET_AUTORELOAD(&htim3, 1400 - 1);
 			__HAL_TIM_SET_COMPARE(&htim3, TIM_CHANNEL_1, 100 - 1);
 			HAL_TIM_PWM_Stop(&htim3, TIM_CHANNEL_1);
@@ -866,9 +1238,50 @@ HAL_StatusTypeDef process_command (void)
 			HAL_GPIO_WritePin(GPIOA, GPIO_PIN_15, GPIO_PIN_SET);
 			HAL_GPIO_WritePin(GPIOE, GPIO_PIN_0| GPIO_PIN_3 |GPIO_PIN_4|GPIO_PIN_5, GPIO_PIN_SET);
 			HAL_GPIO_WritePin(GPIOE,  GPIO_PIN_1, GPIO_PIN_RESET);
+		
+			if (xSemaphoreTake( uart_A1_xSemaphore,10000) == pdTRUE) {
+					// hand shake
+					// fill buffer as in tab3B1
+					// function start: repeated code of hand shake sent tab3B1
+					UART_send_buffer[0] = 0xA6;
+					UART_send_buffer[1] = 0x0D;
+					UART_send_buffer[2] = 0xAA;
+					//https://zhidao.baidu.com/question/1638675882443131580.html?qbpn=2_2&tx=&word=%E4%BB%8E%E4%B8%80%E4%B8%AA16%E4%BD%8D%E5%8F%98%E9%87%8F%E4%B8%AD%E5%8F%96%E5%87%BA%E9%AB%988%E4%BD%8D%E5%92%8C%E4%BD%8E8%E4%BD%8D%EF%BC%8C%E6%B1%82C%E8%AF%AD%E8%A8%80%E7%A8%8B%E5%BA%8F%EF%BC%9F&fr=newsearchlist
+					code_verify = (UART_recv_buffer[3] + UART_recv_buffer[4]) * UART_recv_buffer[5];
+					UART_send_buffer[3] = code_verify & 0xff;
+					UART_send_buffer[4] = (code_verify >> 8) & 0xff;
+					UART_send_buffer[5] = (code_verify >> 16) & 0xff;
+					UART_send_buffer[6] = (code_verify >> 24) & 0xff;
+					UART_send_buffer[7] = 0x0B;
+					UART_send_buffer[8] = 0x00;
+					UART_send_buffer[9] = 0x00;
+					UART_send_buffer[10] = 0x00;
+					UART_send_buffer[11] = 0x00;
+					frame_verify = UART_send_buffer[2] + UART_send_buffer[3] + UART_send_buffer[4] + UART_send_buffer[5] + \
+											   UART_send_buffer[6] + UART_send_buffer[7] + UART_send_buffer[8] + UART_send_buffer[9] + \
+												 UART_send_buffer[10];
+					UART_send_buffer[12] = frame_verify & 0xff;
+					UART_send_buffer[13] = 0x86;
+					
+					// send buffer
+					HAL_UART_Transmit_DMA(&huart1, (uint8_t *)&UART_send_buffer, 13);   //choose uart line
+					
+					if (xSemaphoreTake( exti_xSemaphore, 10000) == pdTRUE) {
+						time_origin = xTaskGetTickCount() * portTICK_RATE_MS;
+						FieldHandle = osThreadNew(field_task, NULL, &field_attributes);
+						xTaskCreate(field_task, "FIELD", configMINIMAL_STACK_SIZE * 4, NULL, FIELD_TASK_PRIO, &field_xHandle);
+					}
+					else {
+						//error message
+					}
+			}
+
 			return HAL_OK;		
 
 		case 0x0C:
+			if( FieldHandle != NULL ) {
+				osThreadTerminate( FieldHandle );
+			}
 			__HAL_TIM_SET_AUTORELOAD(&htim3, 1400 - 1);
 			__HAL_TIM_SET_COMPARE(&htim3, TIM_CHANNEL_1, 100 - 1);
 			HAL_TIM_PWM_Stop(&htim3, TIM_CHANNEL_1);
@@ -878,9 +1291,50 @@ HAL_StatusTypeDef process_command (void)
 			HAL_GPIO_WritePin(GPIOA, GPIO_PIN_15, GPIO_PIN_SET);
 			HAL_GPIO_WritePin(GPIOE, GPIO_PIN_0| GPIO_PIN_3 |GPIO_PIN_4|GPIO_PIN_5, GPIO_PIN_SET);
 			HAL_GPIO_WritePin(GPIOE,  GPIO_PIN_1, GPIO_PIN_RESET);
+		
+			if (xSemaphoreTake( uart_A1_xSemaphore,10000) == pdTRUE) {
+					// hand shake
+					// fill buffer as in tab3B1
+					// function start: repeated code of hand shake sent tab3B1
+					UART_send_buffer[0] = 0xA6;
+					UART_send_buffer[1] = 0x0D;
+					UART_send_buffer[2] = 0xAA;
+					//https://zhidao.baidu.com/question/1638675882443131580.html?qbpn=2_2&tx=&word=%E4%BB%8E%E4%B8%80%E4%B8%AA16%E4%BD%8D%E5%8F%98%E9%87%8F%E4%B8%AD%E5%8F%96%E5%87%BA%E9%AB%988%E4%BD%8D%E5%92%8C%E4%BD%8E8%E4%BD%8D%EF%BC%8C%E6%B1%82C%E8%AF%AD%E8%A8%80%E7%A8%8B%E5%BA%8F%EF%BC%9F&fr=newsearchlist
+					code_verify = (UART_recv_buffer[3] + UART_recv_buffer[4]) * UART_recv_buffer[5];
+					UART_send_buffer[3] = code_verify & 0xff;
+					UART_send_buffer[4] = (code_verify >> 8) & 0xff;
+					UART_send_buffer[5] = (code_verify >> 16) & 0xff;
+					UART_send_buffer[6] = (code_verify >> 24) & 0xff;
+					UART_send_buffer[7] = 0x0B;
+					UART_send_buffer[8] = 0x00;
+					UART_send_buffer[9] = 0x00;
+					UART_send_buffer[10] = 0x00;
+					UART_send_buffer[11] = 0x00;
+					frame_verify = UART_send_buffer[2] + UART_send_buffer[3] + UART_send_buffer[4] + UART_send_buffer[5] + \
+											   UART_send_buffer[6] + UART_send_buffer[7] + UART_send_buffer[8] + UART_send_buffer[9] + \
+												 UART_send_buffer[10];
+					UART_send_buffer[12] = frame_verify & 0xff;
+					UART_send_buffer[13] = 0x86;
+					
+					// send buffer
+					HAL_UART_Transmit_DMA(&huart1, (uint8_t *)&UART_send_buffer, 13);   //choose uart line
+					
+					if (xSemaphoreTake( exti_xSemaphore, 10000) == pdTRUE) {
+						time_origin = xTaskGetTickCount() * portTICK_RATE_MS;
+						FieldHandle = osThreadNew(field_task, NULL, &field_attributes);
+						xTaskCreate(field_task, "FIELD", configMINIMAL_STACK_SIZE * 4, NULL, FIELD_TASK_PRIO, &field_xHandle);
+					}
+					else {
+						//error message
+					}
+			}
+
 			return HAL_OK;			
 
 		case 0x0D:
+			if( FieldHandle != NULL ) {
+				osThreadTerminate( FieldHandle );
+			}
 			__HAL_TIM_SET_AUTORELOAD(&htim3, 1400 - 1);
 			__HAL_TIM_SET_COMPARE(&htim3, TIM_CHANNEL_1, 100 - 1);
 			HAL_TIM_PWM_Stop(&htim3, TIM_CHANNEL_1);
@@ -890,9 +1344,50 @@ HAL_StatusTypeDef process_command (void)
 			HAL_GPIO_WritePin(GPIOA, GPIO_PIN_15, GPIO_PIN_SET);
 			HAL_GPIO_WritePin(GPIOE, GPIO_PIN_0| GPIO_PIN_3 |GPIO_PIN_4|GPIO_PIN_5, GPIO_PIN_SET);
 			HAL_GPIO_WritePin(GPIOE,  GPIO_PIN_1, GPIO_PIN_RESET);
+		
+			if (xSemaphoreTake( uart_A1_xSemaphore,10000) == pdTRUE) {
+					// hand shake
+					// fill buffer as in tab3B1
+					// function start: repeated code of hand shake sent tab3B1
+					UART_send_buffer[0] = 0xA6;
+					UART_send_buffer[1] = 0x0D;
+					UART_send_buffer[2] = 0xAA;
+					//https://zhidao.baidu.com/question/1638675882443131580.html?qbpn=2_2&tx=&word=%E4%BB%8E%E4%B8%80%E4%B8%AA16%E4%BD%8D%E5%8F%98%E9%87%8F%E4%B8%AD%E5%8F%96%E5%87%BA%E9%AB%988%E4%BD%8D%E5%92%8C%E4%BD%8E8%E4%BD%8D%EF%BC%8C%E6%B1%82C%E8%AF%AD%E8%A8%80%E7%A8%8B%E5%BA%8F%EF%BC%9F&fr=newsearchlist
+					code_verify = (UART_recv_buffer[3] + UART_recv_buffer[4]) * UART_recv_buffer[5];
+					UART_send_buffer[3] = code_verify & 0xff;
+					UART_send_buffer[4] = (code_verify >> 8) & 0xff;
+					UART_send_buffer[5] = (code_verify >> 16) & 0xff;
+					UART_send_buffer[6] = (code_verify >> 24) & 0xff;
+					UART_send_buffer[7] = 0x0B;
+					UART_send_buffer[8] = 0x00;
+					UART_send_buffer[9] = 0x00;
+					UART_send_buffer[10] = 0x00;
+					UART_send_buffer[11] = 0x00;
+					frame_verify = UART_send_buffer[2] + UART_send_buffer[3] + UART_send_buffer[4] + UART_send_buffer[5] + \
+											   UART_send_buffer[6] + UART_send_buffer[7] + UART_send_buffer[8] + UART_send_buffer[9] + \
+												 UART_send_buffer[10];
+					UART_send_buffer[12] = frame_verify & 0xff;
+					UART_send_buffer[13] = 0x86;
+					
+					// send buffer
+					HAL_UART_Transmit_DMA(&huart1, (uint8_t *)&UART_send_buffer, 13);   //choose uart line
+					
+					if (xSemaphoreTake( exti_xSemaphore, 10000) == pdTRUE) {
+						time_origin = xTaskGetTickCount() * portTICK_RATE_MS;
+						FieldHandle = osThreadNew(field_task, NULL, &field_attributes);
+						xTaskCreate(field_task, "FIELD", configMINIMAL_STACK_SIZE * 4, NULL, FIELD_TASK_PRIO, &field_xHandle);
+					}
+					else {
+						//error message
+					}
+			}
+
 			return HAL_OK;		
 
 		case 0x0E:
+			if( FieldHandle != NULL ) {
+				osThreadTerminate( FieldHandle );
+			}
 			__HAL_TIM_SET_AUTORELOAD(&htim3, 1000 - 1);
 			__HAL_TIM_SET_COMPARE(&htim3, TIM_CHANNEL_1, 100 - 1);
 			HAL_TIM_PWM_Stop(&htim3, TIM_CHANNEL_1);
@@ -902,9 +1397,50 @@ HAL_StatusTypeDef process_command (void)
 			HAL_GPIO_WritePin(GPIOA, GPIO_PIN_15, GPIO_PIN_SET);
 			HAL_GPIO_WritePin(GPIOE, GPIO_PIN_0 |GPIO_PIN_4|GPIO_PIN_5, GPIO_PIN_SET);
 			HAL_GPIO_WritePin(GPIOE,  GPIO_PIN_1| GPIO_PIN_3, GPIO_PIN_RESET);
+		
+			if (xSemaphoreTake( uart_A1_xSemaphore,10000) == pdTRUE) {
+					// hand shake
+					// fill buffer as in tab3B1
+					// function start: repeated code of hand shake sent tab3B1
+					UART_send_buffer[0] = 0xA6;
+					UART_send_buffer[1] = 0x0D;
+					UART_send_buffer[2] = 0xAA;
+					//https://zhidao.baidu.com/question/1638675882443131580.html?qbpn=2_2&tx=&word=%E4%BB%8E%E4%B8%80%E4%B8%AA16%E4%BD%8D%E5%8F%98%E9%87%8F%E4%B8%AD%E5%8F%96%E5%87%BA%E9%AB%988%E4%BD%8D%E5%92%8C%E4%BD%8E8%E4%BD%8D%EF%BC%8C%E6%B1%82C%E8%AF%AD%E8%A8%80%E7%A8%8B%E5%BA%8F%EF%BC%9F&fr=newsearchlist
+					code_verify = (UART_recv_buffer[3] + UART_recv_buffer[4]) * UART_recv_buffer[5];
+					UART_send_buffer[3] = code_verify & 0xff;
+					UART_send_buffer[4] = (code_verify >> 8) & 0xff;
+					UART_send_buffer[5] = (code_verify >> 16) & 0xff;
+					UART_send_buffer[6] = (code_verify >> 24) & 0xff;
+					UART_send_buffer[7] = 0x0B;
+					UART_send_buffer[8] = 0x00;
+					UART_send_buffer[9] = 0x00;
+					UART_send_buffer[10] = 0x00;
+					UART_send_buffer[11] = 0x00;
+					frame_verify = UART_send_buffer[2] + UART_send_buffer[3] + UART_send_buffer[4] + UART_send_buffer[5] + \
+											   UART_send_buffer[6] + UART_send_buffer[7] + UART_send_buffer[8] + UART_send_buffer[9] + \
+												 UART_send_buffer[10];
+					UART_send_buffer[12] = frame_verify & 0xff;
+					UART_send_buffer[13] = 0x86;
+					
+					// send buffer
+					HAL_UART_Transmit_DMA(&huart1, (uint8_t *)&UART_send_buffer, 13);   //choose uart line
+					
+					if (xSemaphoreTake( exti_xSemaphore, 10000) == pdTRUE) {
+						time_origin = xTaskGetTickCount() * portTICK_RATE_MS;
+						FieldHandle = osThreadNew(field_task, NULL, &field_attributes);
+						xTaskCreate(field_task, "FIELD", configMINIMAL_STACK_SIZE * 4, NULL, FIELD_TASK_PRIO, &field_xHandle);
+					}
+					else {
+						//error message
+					}
+			}
+
 			return HAL_OK;		
 		
 		case 0x0F:
+			if( FieldHandle != NULL ) {
+				osThreadTerminate( FieldHandle );
+			}
 			__HAL_TIM_SET_AUTORELOAD(&htim3, 2000 - 1);
 			__HAL_TIM_SET_COMPARE(&htim3, TIM_CHANNEL_1, 100 - 1);
 			HAL_TIM_PWM_Stop(&htim3, TIM_CHANNEL_1);
@@ -914,9 +1450,50 @@ HAL_StatusTypeDef process_command (void)
 			HAL_GPIO_WritePin(GPIOA, GPIO_PIN_15, GPIO_PIN_SET);
 			HAL_GPIO_WritePin(GPIOE, GPIO_PIN_0 |GPIO_PIN_4|GPIO_PIN_5, GPIO_PIN_SET);
 			HAL_GPIO_WritePin(GPIOE,  GPIO_PIN_1| GPIO_PIN_3, GPIO_PIN_RESET);
+		
+			if (xSemaphoreTake( uart_A1_xSemaphore,10000) == pdTRUE) {
+					// hand shake
+					// fill buffer as in tab3B1
+					// function start: repeated code of hand shake sent tab3B1
+					UART_send_buffer[0] = 0xA6;
+					UART_send_buffer[1] = 0x0D;
+					UART_send_buffer[2] = 0xAA;
+					//https://zhidao.baidu.com/question/1638675882443131580.html?qbpn=2_2&tx=&word=%E4%BB%8E%E4%B8%80%E4%B8%AA16%E4%BD%8D%E5%8F%98%E9%87%8F%E4%B8%AD%E5%8F%96%E5%87%BA%E9%AB%988%E4%BD%8D%E5%92%8C%E4%BD%8E8%E4%BD%8D%EF%BC%8C%E6%B1%82C%E8%AF%AD%E8%A8%80%E7%A8%8B%E5%BA%8F%EF%BC%9F&fr=newsearchlist
+					code_verify = (UART_recv_buffer[3] + UART_recv_buffer[4]) * UART_recv_buffer[5];
+					UART_send_buffer[3] = code_verify & 0xff;
+					UART_send_buffer[4] = (code_verify >> 8) & 0xff;
+					UART_send_buffer[5] = (code_verify >> 16) & 0xff;
+					UART_send_buffer[6] = (code_verify >> 24) & 0xff;
+					UART_send_buffer[7] = 0x0B;
+					UART_send_buffer[8] = 0x00;
+					UART_send_buffer[9] = 0x00;
+					UART_send_buffer[10] = 0x00;
+					UART_send_buffer[11] = 0x00;
+					frame_verify = UART_send_buffer[2] + UART_send_buffer[3] + UART_send_buffer[4] + UART_send_buffer[5] + \
+											   UART_send_buffer[6] + UART_send_buffer[7] + UART_send_buffer[8] + UART_send_buffer[9] + \
+												 UART_send_buffer[10];
+					UART_send_buffer[12] = frame_verify & 0xff;
+					UART_send_buffer[13] = 0x86;
+					
+					// send buffer
+					HAL_UART_Transmit_DMA(&huart1, (uint8_t *)&UART_send_buffer, 13);   //choose uart line
+					
+					if (xSemaphoreTake( exti_xSemaphore, 10000) == pdTRUE) {
+						time_origin = xTaskGetTickCount() * portTICK_RATE_MS;
+						FieldHandle = osThreadNew(field_task, NULL, &field_attributes);
+						xTaskCreate(field_task, "FIELD", configMINIMAL_STACK_SIZE * 4, NULL, FIELD_TASK_PRIO, &field_xHandle);
+					}
+					else {
+						//error message
+					}
+			}
+
 			return HAL_OK;	
 
 		case 0x10:
+			if( FieldHandle != NULL ) {
+				osThreadTerminate( FieldHandle );
+			}
 			__HAL_TIM_SET_AUTORELOAD(&htim3, 1000 - 1);
 			__HAL_TIM_SET_COMPARE(&htim3, TIM_CHANNEL_1, 100 - 1);
 			HAL_TIM_PWM_Stop(&htim3, TIM_CHANNEL_1);
@@ -926,9 +1503,50 @@ HAL_StatusTypeDef process_command (void)
 			HAL_GPIO_WritePin(GPIOA, GPIO_PIN_15, GPIO_PIN_SET);
 			HAL_GPIO_WritePin(GPIOE, GPIO_PIN_0| GPIO_PIN_3 |GPIO_PIN_4|GPIO_PIN_5, GPIO_PIN_SET);
 			HAL_GPIO_WritePin(GPIOE,  GPIO_PIN_1, GPIO_PIN_RESET);
+		
+			if (xSemaphoreTake( uart_A1_xSemaphore,10000) == pdTRUE) {
+					// hand shake
+					// fill buffer as in tab3B1
+					// function start: repeated code of hand shake sent tab3B1
+					UART_send_buffer[0] = 0xA6;
+					UART_send_buffer[1] = 0x0D;
+					UART_send_buffer[2] = 0xAA;
+					//https://zhidao.baidu.com/question/1638675882443131580.html?qbpn=2_2&tx=&word=%E4%BB%8E%E4%B8%80%E4%B8%AA16%E4%BD%8D%E5%8F%98%E9%87%8F%E4%B8%AD%E5%8F%96%E5%87%BA%E9%AB%988%E4%BD%8D%E5%92%8C%E4%BD%8E8%E4%BD%8D%EF%BC%8C%E6%B1%82C%E8%AF%AD%E8%A8%80%E7%A8%8B%E5%BA%8F%EF%BC%9F&fr=newsearchlist
+					code_verify = (UART_recv_buffer[3] + UART_recv_buffer[4]) * UART_recv_buffer[5];
+					UART_send_buffer[3] = code_verify & 0xff;
+					UART_send_buffer[4] = (code_verify >> 8) & 0xff;
+					UART_send_buffer[5] = (code_verify >> 16) & 0xff;
+					UART_send_buffer[6] = (code_verify >> 24) & 0xff;
+					UART_send_buffer[7] = 0x0B;
+					UART_send_buffer[8] = 0x00;
+					UART_send_buffer[9] = 0x00;
+					UART_send_buffer[10] = 0x00;
+					UART_send_buffer[11] = 0x00;
+					frame_verify = UART_send_buffer[2] + UART_send_buffer[3] + UART_send_buffer[4] + UART_send_buffer[5] + \
+											   UART_send_buffer[6] + UART_send_buffer[7] + UART_send_buffer[8] + UART_send_buffer[9] + \
+												 UART_send_buffer[10];
+					UART_send_buffer[12] = frame_verify & 0xff;
+					UART_send_buffer[13] = 0x86;
+					
+					// send buffer
+					HAL_UART_Transmit_DMA(&huart1, (uint8_t *)&UART_send_buffer, 13);   //choose uart line
+					
+					if (xSemaphoreTake( exti_xSemaphore, 10000) == pdTRUE) {
+						time_origin = xTaskGetTickCount() * portTICK_RATE_MS;
+						FieldHandle = osThreadNew(field_task, NULL, &field_attributes);
+						xTaskCreate(field_task, "FIELD", configMINIMAL_STACK_SIZE * 4, NULL, FIELD_TASK_PRIO, &field_xHandle);
+					}
+					else {
+						//error message
+					}
+			}
+
 			return HAL_OK;			
 
 		case 0x11:
+			if( FieldHandle != NULL ) {
+				osThreadTerminate( FieldHandle );
+			}
 			__HAL_TIM_SET_AUTORELOAD(&htim3, 2000 - 1);
 			__HAL_TIM_SET_COMPARE(&htim3, TIM_CHANNEL_1, 100 - 1);
 			HAL_TIM_PWM_Stop(&htim3, TIM_CHANNEL_1);
@@ -938,9 +1556,50 @@ HAL_StatusTypeDef process_command (void)
 			HAL_GPIO_WritePin(GPIOA, GPIO_PIN_15, GPIO_PIN_SET);
 			HAL_GPIO_WritePin(GPIOE, GPIO_PIN_0| GPIO_PIN_3 |GPIO_PIN_4|GPIO_PIN_5, GPIO_PIN_SET);
 			HAL_GPIO_WritePin(GPIOE,  GPIO_PIN_1, GPIO_PIN_RESET);
+		
+			if (xSemaphoreTake( uart_A1_xSemaphore,10000) == pdTRUE) {
+					// hand shake
+					// fill buffer as in tab3B1
+					// function start: repeated code of hand shake sent tab3B1
+					UART_send_buffer[0] = 0xA6;
+					UART_send_buffer[1] = 0x0D;
+					UART_send_buffer[2] = 0xAA;
+					//https://zhidao.baidu.com/question/1638675882443131580.html?qbpn=2_2&tx=&word=%E4%BB%8E%E4%B8%80%E4%B8%AA16%E4%BD%8D%E5%8F%98%E9%87%8F%E4%B8%AD%E5%8F%96%E5%87%BA%E9%AB%988%E4%BD%8D%E5%92%8C%E4%BD%8E8%E4%BD%8D%EF%BC%8C%E6%B1%82C%E8%AF%AD%E8%A8%80%E7%A8%8B%E5%BA%8F%EF%BC%9F&fr=newsearchlist
+					code_verify = (UART_recv_buffer[3] + UART_recv_buffer[4]) * UART_recv_buffer[5];
+					UART_send_buffer[3] = code_verify & 0xff;
+					UART_send_buffer[4] = (code_verify >> 8) & 0xff;
+					UART_send_buffer[5] = (code_verify >> 16) & 0xff;
+					UART_send_buffer[6] = (code_verify >> 24) & 0xff;
+					UART_send_buffer[7] = 0x0B;
+					UART_send_buffer[8] = 0x00;
+					UART_send_buffer[9] = 0x00;
+					UART_send_buffer[10] = 0x00;
+					UART_send_buffer[11] = 0x00;
+					frame_verify = UART_send_buffer[2] + UART_send_buffer[3] + UART_send_buffer[4] + UART_send_buffer[5] + \
+											   UART_send_buffer[6] + UART_send_buffer[7] + UART_send_buffer[8] + UART_send_buffer[9] + \
+												 UART_send_buffer[10];
+					UART_send_buffer[12] = frame_verify & 0xff;
+					UART_send_buffer[13] = 0x86;
+					
+					// send buffer
+					HAL_UART_Transmit_DMA(&huart1, (uint8_t *)&UART_send_buffer, 13);   //choose uart line
+					
+					if (xSemaphoreTake( exti_xSemaphore, 10000) == pdTRUE) {
+						time_origin = xTaskGetTickCount() * portTICK_RATE_MS;
+						FieldHandle = osThreadNew(field_task, NULL, &field_attributes);
+						xTaskCreate(field_task, "FIELD", configMINIMAL_STACK_SIZE * 4, NULL, FIELD_TASK_PRIO, &field_xHandle);
+					}
+					else {
+						//error message
+					}
+			}
+
 			return HAL_OK;	
 
 		case 0x12:
+			if( FieldHandle != NULL ) {
+				osThreadTerminate( FieldHandle );
+			}
 			__HAL_TIM_SET_AUTORELOAD(&htim3, 1333- 1);
 			__HAL_TIM_SET_COMPARE(&htim3, TIM_CHANNEL_1, 100 - 1);
 			HAL_TIM_PWM_Stop(&htim3, TIM_CHANNEL_1);
@@ -950,9 +1609,50 @@ HAL_StatusTypeDef process_command (void)
 			HAL_GPIO_WritePin(GPIOA, GPIO_PIN_15, GPIO_PIN_SET);
 			HAL_GPIO_WritePin(GPIOE, GPIO_PIN_0 |GPIO_PIN_4|GPIO_PIN_5, GPIO_PIN_SET);
 			HAL_GPIO_WritePin(GPIOE,  GPIO_PIN_1| GPIO_PIN_3, GPIO_PIN_RESET);
+		
+			if (xSemaphoreTake( uart_A1_xSemaphore,10000) == pdTRUE) {
+					// hand shake
+					// fill buffer as in tab3B1
+					// function start: repeated code of hand shake sent tab3B1
+					UART_send_buffer[0] = 0xA6;
+					UART_send_buffer[1] = 0x0D;
+					UART_send_buffer[2] = 0xAA;
+					//https://zhidao.baidu.com/question/1638675882443131580.html?qbpn=2_2&tx=&word=%E4%BB%8E%E4%B8%80%E4%B8%AA16%E4%BD%8D%E5%8F%98%E9%87%8F%E4%B8%AD%E5%8F%96%E5%87%BA%E9%AB%988%E4%BD%8D%E5%92%8C%E4%BD%8E8%E4%BD%8D%EF%BC%8C%E6%B1%82C%E8%AF%AD%E8%A8%80%E7%A8%8B%E5%BA%8F%EF%BC%9F&fr=newsearchlist
+					code_verify = (UART_recv_buffer[3] + UART_recv_buffer[4]) * UART_recv_buffer[5];
+					UART_send_buffer[3] = code_verify & 0xff;
+					UART_send_buffer[4] = (code_verify >> 8) & 0xff;
+					UART_send_buffer[5] = (code_verify >> 16) & 0xff;
+					UART_send_buffer[6] = (code_verify >> 24) & 0xff;
+					UART_send_buffer[7] = 0x0B;
+					UART_send_buffer[8] = 0x00;
+					UART_send_buffer[9] = 0x00;
+					UART_send_buffer[10] = 0x00;
+					UART_send_buffer[11] = 0x00;
+					frame_verify = UART_send_buffer[2] + UART_send_buffer[3] + UART_send_buffer[4] + UART_send_buffer[5] + \
+											   UART_send_buffer[6] + UART_send_buffer[7] + UART_send_buffer[8] + UART_send_buffer[9] + \
+												 UART_send_buffer[10];
+					UART_send_buffer[12] = frame_verify & 0xff;
+					UART_send_buffer[13] = 0x86;
+					
+					// send buffer
+					HAL_UART_Transmit_DMA(&huart1, (uint8_t *)&UART_send_buffer, 13);   //choose uart line
+					
+					if (xSemaphoreTake( exti_xSemaphore, 10000) == pdTRUE) {
+						time_origin = xTaskGetTickCount() * portTICK_RATE_MS;
+						FieldHandle = osThreadNew(field_task, NULL, &field_attributes);
+						xTaskCreate(field_task, "FIELD", configMINIMAL_STACK_SIZE * 4, NULL, FIELD_TASK_PRIO, &field_xHandle);
+					}
+					else {
+						//error message
+					}
+			}
+
 			return HAL_OK;		
 		
 		case 0x13:
+			if( FieldHandle != NULL ) {
+				osThreadTerminate( FieldHandle );
+			}
 			__HAL_TIM_SET_AUTORELOAD(&htim3, 1333 - 1);
 			__HAL_TIM_SET_COMPARE(&htim3, TIM_CHANNEL_1, 100 - 1);
 			HAL_TIM_PWM_Stop(&htim3, TIM_CHANNEL_1);
@@ -962,9 +1662,50 @@ HAL_StatusTypeDef process_command (void)
 			HAL_GPIO_WritePin(GPIOA, GPIO_PIN_15, GPIO_PIN_SET);
 			HAL_GPIO_WritePin(GPIOE, GPIO_PIN_0 |GPIO_PIN_4|GPIO_PIN_5, GPIO_PIN_SET);
 			HAL_GPIO_WritePin(GPIOE,  GPIO_PIN_1| GPIO_PIN_3, GPIO_PIN_RESET);
+		
+			if (xSemaphoreTake( uart_A1_xSemaphore,10000) == pdTRUE) {
+					// hand shake
+					// fill buffer as in tab3B1
+					// function start: repeated code of hand shake sent tab3B1
+					UART_send_buffer[0] = 0xA6;
+					UART_send_buffer[1] = 0x0D;
+					UART_send_buffer[2] = 0xAA;
+					//https://zhidao.baidu.com/question/1638675882443131580.html?qbpn=2_2&tx=&word=%E4%BB%8E%E4%B8%80%E4%B8%AA16%E4%BD%8D%E5%8F%98%E9%87%8F%E4%B8%AD%E5%8F%96%E5%87%BA%E9%AB%988%E4%BD%8D%E5%92%8C%E4%BD%8E8%E4%BD%8D%EF%BC%8C%E6%B1%82C%E8%AF%AD%E8%A8%80%E7%A8%8B%E5%BA%8F%EF%BC%9F&fr=newsearchlist
+					code_verify = (UART_recv_buffer[3] + UART_recv_buffer[4]) * UART_recv_buffer[5];
+					UART_send_buffer[3] = code_verify & 0xff;
+					UART_send_buffer[4] = (code_verify >> 8) & 0xff;
+					UART_send_buffer[5] = (code_verify >> 16) & 0xff;
+					UART_send_buffer[6] = (code_verify >> 24) & 0xff;
+					UART_send_buffer[7] = 0x0B;
+					UART_send_buffer[8] = 0x00;
+					UART_send_buffer[9] = 0x00;
+					UART_send_buffer[10] = 0x00;
+					UART_send_buffer[11] = 0x00;
+					frame_verify = UART_send_buffer[2] + UART_send_buffer[3] + UART_send_buffer[4] + UART_send_buffer[5] + \
+											   UART_send_buffer[6] + UART_send_buffer[7] + UART_send_buffer[8] + UART_send_buffer[9] + \
+												 UART_send_buffer[10];
+					UART_send_buffer[12] = frame_verify & 0xff;
+					UART_send_buffer[13] = 0x86;
+					
+					// send buffer
+					HAL_UART_Transmit_DMA(&huart1, (uint8_t *)&UART_send_buffer, 13);   //choose uart line
+					
+					if (xSemaphoreTake( exti_xSemaphore, 10000) == pdTRUE) {
+						time_origin = xTaskGetTickCount() * portTICK_RATE_MS;
+						FieldHandle = osThreadNew(field_task, NULL, &field_attributes);
+						xTaskCreate(field_task, "FIELD", configMINIMAL_STACK_SIZE * 4, NULL, FIELD_TASK_PRIO, &field_xHandle);
+					}
+					else {
+						//error message
+					}
+			}
+
 			return HAL_OK;
 
 		case 0x14:
+			if( FieldHandle != NULL ) {
+				osThreadTerminate( FieldHandle );
+			}
 			__HAL_TIM_SET_AUTORELOAD(&htim3, 1333 - 1);
 			__HAL_TIM_SET_COMPARE(&htim3, TIM_CHANNEL_1, 100 - 1);
 			HAL_TIM_PWM_Stop(&htim3, TIM_CHANNEL_1);
@@ -974,9 +1715,50 @@ HAL_StatusTypeDef process_command (void)
 			HAL_GPIO_WritePin(GPIOA, GPIO_PIN_15, GPIO_PIN_SET);
 			HAL_GPIO_WritePin(GPIOE, GPIO_PIN_0 |GPIO_PIN_4|GPIO_PIN_5, GPIO_PIN_SET);
 			HAL_GPIO_WritePin(GPIOE,  GPIO_PIN_1| GPIO_PIN_3, GPIO_PIN_RESET);
+		
+			if (xSemaphoreTake( uart_A1_xSemaphore,10000) == pdTRUE) {
+					// hand shake
+					// fill buffer as in tab3B1
+					// function start: repeated code of hand shake sent tab3B1
+					UART_send_buffer[0] = 0xA6;
+					UART_send_buffer[1] = 0x0D;
+					UART_send_buffer[2] = 0xAA;
+					//https://zhidao.baidu.com/question/1638675882443131580.html?qbpn=2_2&tx=&word=%E4%BB%8E%E4%B8%80%E4%B8%AA16%E4%BD%8D%E5%8F%98%E9%87%8F%E4%B8%AD%E5%8F%96%E5%87%BA%E9%AB%988%E4%BD%8D%E5%92%8C%E4%BD%8E8%E4%BD%8D%EF%BC%8C%E6%B1%82C%E8%AF%AD%E8%A8%80%E7%A8%8B%E5%BA%8F%EF%BC%9F&fr=newsearchlist
+					code_verify = (UART_recv_buffer[3] + UART_recv_buffer[4]) * UART_recv_buffer[5];
+					UART_send_buffer[3] = code_verify & 0xff;
+					UART_send_buffer[4] = (code_verify >> 8) & 0xff;
+					UART_send_buffer[5] = (code_verify >> 16) & 0xff;
+					UART_send_buffer[6] = (code_verify >> 24) & 0xff;
+					UART_send_buffer[7] = 0x0B;
+					UART_send_buffer[8] = 0x00;
+					UART_send_buffer[9] = 0x00;
+					UART_send_buffer[10] = 0x00;
+					UART_send_buffer[11] = 0x00;
+					frame_verify = UART_send_buffer[2] + UART_send_buffer[3] + UART_send_buffer[4] + UART_send_buffer[5] + \
+											   UART_send_buffer[6] + UART_send_buffer[7] + UART_send_buffer[8] + UART_send_buffer[9] + \
+												 UART_send_buffer[10];
+					UART_send_buffer[12] = frame_verify & 0xff;
+					UART_send_buffer[13] = 0x86;
+					
+					// send buffer
+					HAL_UART_Transmit_DMA(&huart1, (uint8_t *)&UART_send_buffer, 13);   //choose uart line
+					
+					if (xSemaphoreTake( exti_xSemaphore, 10000) == pdTRUE) {
+						time_origin = xTaskGetTickCount() * portTICK_RATE_MS;
+						FieldHandle = osThreadNew(field_task, NULL, &field_attributes);
+						xTaskCreate(field_task, "FIELD", configMINIMAL_STACK_SIZE * 4, NULL, FIELD_TASK_PRIO, &field_xHandle);
+					}
+					else {
+						//error message
+					}
+			}
+
 			return HAL_OK;		
 		
 		case 0x15:
+			if( FieldHandle != NULL ) {
+				osThreadTerminate( FieldHandle );
+			}
 			__HAL_TIM_SET_AUTORELOAD(&htim3, 1333 - 1);
 			__HAL_TIM_SET_COMPARE(&htim3, TIM_CHANNEL_1, 100 - 1);
 			HAL_TIM_PWM_Stop(&htim3, TIM_CHANNEL_1);
@@ -986,9 +1768,50 @@ HAL_StatusTypeDef process_command (void)
 			HAL_GPIO_WritePin(GPIOA, GPIO_PIN_15, GPIO_PIN_SET);
 			HAL_GPIO_WritePin(GPIOE, GPIO_PIN_0 |GPIO_PIN_4|GPIO_PIN_5, GPIO_PIN_SET);
 			HAL_GPIO_WritePin(GPIOE,  GPIO_PIN_1| GPIO_PIN_3, GPIO_PIN_RESET);
+		
+			if (xSemaphoreTake( uart_A1_xSemaphore,10000) == pdTRUE) {
+					// hand shake
+					// fill buffer as in tab3B1
+					// function start: repeated code of hand shake sent tab3B1
+					UART_send_buffer[0] = 0xA6;
+					UART_send_buffer[1] = 0x0D;
+					UART_send_buffer[2] = 0xAA;
+					//https://zhidao.baidu.com/question/1638675882443131580.html?qbpn=2_2&tx=&word=%E4%BB%8E%E4%B8%80%E4%B8%AA16%E4%BD%8D%E5%8F%98%E9%87%8F%E4%B8%AD%E5%8F%96%E5%87%BA%E9%AB%988%E4%BD%8D%E5%92%8C%E4%BD%8E8%E4%BD%8D%EF%BC%8C%E6%B1%82C%E8%AF%AD%E8%A8%80%E7%A8%8B%E5%BA%8F%EF%BC%9F&fr=newsearchlist
+					code_verify = (UART_recv_buffer[3] + UART_recv_buffer[4]) * UART_recv_buffer[5];
+					UART_send_buffer[3] = code_verify & 0xff;
+					UART_send_buffer[4] = (code_verify >> 8) & 0xff;
+					UART_send_buffer[5] = (code_verify >> 16) & 0xff;
+					UART_send_buffer[6] = (code_verify >> 24) & 0xff;
+					UART_send_buffer[7] = 0x0B;
+					UART_send_buffer[8] = 0x00;
+					UART_send_buffer[9] = 0x00;
+					UART_send_buffer[10] = 0x00;
+					UART_send_buffer[11] = 0x00;
+					frame_verify = UART_send_buffer[2] + UART_send_buffer[3] + UART_send_buffer[4] + UART_send_buffer[5] + \
+											   UART_send_buffer[6] + UART_send_buffer[7] + UART_send_buffer[8] + UART_send_buffer[9] + \
+												 UART_send_buffer[10];
+					UART_send_buffer[12] = frame_verify & 0xff;
+					UART_send_buffer[13] = 0x86;
+					
+					// send buffer
+					HAL_UART_Transmit_DMA(&huart1, (uint8_t *)&UART_send_buffer, 13);   //choose uart line
+					
+					if (xSemaphoreTake( exti_xSemaphore, 10000) == pdTRUE) {
+						time_origin = xTaskGetTickCount() * portTICK_RATE_MS;
+						FieldHandle = osThreadNew(field_task, NULL, &field_attributes);
+						xTaskCreate(field_task, "FIELD", configMINIMAL_STACK_SIZE * 4, NULL, FIELD_TASK_PRIO, &field_xHandle);
+					}
+					else {
+						//error message
+					}
+			}
+
 			return HAL_OK;
 
 		case 0x16:
+			if( FieldHandle != NULL ) {
+				osThreadTerminate( FieldHandle );
+			}
 			__HAL_TIM_SET_AUTORELOAD(&htim3, 1333 - 1);
 			__HAL_TIM_SET_COMPARE(&htim3, TIM_CHANNEL_1, 100 - 1);
 			HAL_TIM_PWM_Stop(&htim3, TIM_CHANNEL_1);
@@ -998,9 +1821,50 @@ HAL_StatusTypeDef process_command (void)
 			HAL_GPIO_WritePin(GPIOA, GPIO_PIN_15, GPIO_PIN_SET);
 			HAL_GPIO_WritePin(GPIOE, GPIO_PIN_0| GPIO_PIN_3 |GPIO_PIN_4|GPIO_PIN_5, GPIO_PIN_SET);
 			HAL_GPIO_WritePin(GPIOE,  GPIO_PIN_1, GPIO_PIN_RESET);
+		
+			if (xSemaphoreTake( uart_A1_xSemaphore,10000) == pdTRUE) {
+					// hand shake
+					// fill buffer as in tab3B1
+					// function start: repeated code of hand shake sent tab3B1
+					UART_send_buffer[0] = 0xA6;
+					UART_send_buffer[1] = 0x0D;
+					UART_send_buffer[2] = 0xAA;
+					//https://zhidao.baidu.com/question/1638675882443131580.html?qbpn=2_2&tx=&word=%E4%BB%8E%E4%B8%80%E4%B8%AA16%E4%BD%8D%E5%8F%98%E9%87%8F%E4%B8%AD%E5%8F%96%E5%87%BA%E9%AB%988%E4%BD%8D%E5%92%8C%E4%BD%8E8%E4%BD%8D%EF%BC%8C%E6%B1%82C%E8%AF%AD%E8%A8%80%E7%A8%8B%E5%BA%8F%EF%BC%9F&fr=newsearchlist
+					code_verify = (UART_recv_buffer[3] + UART_recv_buffer[4]) * UART_recv_buffer[5];
+					UART_send_buffer[3] = code_verify & 0xff;
+					UART_send_buffer[4] = (code_verify >> 8) & 0xff;
+					UART_send_buffer[5] = (code_verify >> 16) & 0xff;
+					UART_send_buffer[6] = (code_verify >> 24) & 0xff;
+					UART_send_buffer[7] = 0x0B;
+					UART_send_buffer[8] = 0x00;
+					UART_send_buffer[9] = 0x00;
+					UART_send_buffer[10] = 0x00;
+					UART_send_buffer[11] = 0x00;
+					frame_verify = UART_send_buffer[2] + UART_send_buffer[3] + UART_send_buffer[4] + UART_send_buffer[5] + \
+											   UART_send_buffer[6] + UART_send_buffer[7] + UART_send_buffer[8] + UART_send_buffer[9] + \
+												 UART_send_buffer[10];
+					UART_send_buffer[12] = frame_verify & 0xff;
+					UART_send_buffer[13] = 0x86;
+					
+					// send buffer
+					HAL_UART_Transmit_DMA(&huart1, (uint8_t *)&UART_send_buffer, 13);   //choose uart line
+					
+					if (xSemaphoreTake( exti_xSemaphore, 10000) == pdTRUE) {
+						time_origin = xTaskGetTickCount() * portTICK_RATE_MS;
+						FieldHandle = osThreadNew(field_task, NULL, &field_attributes);
+						xTaskCreate(field_task, "FIELD", configMINIMAL_STACK_SIZE * 4, NULL, FIELD_TASK_PRIO, &field_xHandle);
+					}
+					else {
+						//error message
+					}
+			}
+
 			return HAL_OK;			
 
 		case 0x17:
+			if( FieldHandle != NULL ) {
+				osThreadTerminate( FieldHandle );
+			}
 			__HAL_TIM_SET_AUTORELOAD(&htim3, 1333 - 1);
 			__HAL_TIM_SET_COMPARE(&htim3, TIM_CHANNEL_1, 100 - 1);
 			HAL_TIM_PWM_Stop(&htim3, TIM_CHANNEL_1);
@@ -1010,9 +1874,50 @@ HAL_StatusTypeDef process_command (void)
 			HAL_GPIO_WritePin(GPIOA, GPIO_PIN_15, GPIO_PIN_SET);
 			HAL_GPIO_WritePin(GPIOE, GPIO_PIN_0| GPIO_PIN_3 |GPIO_PIN_4|GPIO_PIN_5, GPIO_PIN_SET);
 			HAL_GPIO_WritePin(GPIOE,  GPIO_PIN_1, GPIO_PIN_RESET);
+		
+			if (xSemaphoreTake( uart_A1_xSemaphore,10000) == pdTRUE) {
+					// hand shake
+					// fill buffer as in tab3B1
+					// function start: repeated code of hand shake sent tab3B1
+					UART_send_buffer[0] = 0xA6;
+					UART_send_buffer[1] = 0x0D;
+					UART_send_buffer[2] = 0xAA;
+					//https://zhidao.baidu.com/question/1638675882443131580.html?qbpn=2_2&tx=&word=%E4%BB%8E%E4%B8%80%E4%B8%AA16%E4%BD%8D%E5%8F%98%E9%87%8F%E4%B8%AD%E5%8F%96%E5%87%BA%E9%AB%988%E4%BD%8D%E5%92%8C%E4%BD%8E8%E4%BD%8D%EF%BC%8C%E6%B1%82C%E8%AF%AD%E8%A8%80%E7%A8%8B%E5%BA%8F%EF%BC%9F&fr=newsearchlist
+					code_verify = (UART_recv_buffer[3] + UART_recv_buffer[4]) * UART_recv_buffer[5];
+					UART_send_buffer[3] = code_verify & 0xff;
+					UART_send_buffer[4] = (code_verify >> 8) & 0xff;
+					UART_send_buffer[5] = (code_verify >> 16) & 0xff;
+					UART_send_buffer[6] = (code_verify >> 24) & 0xff;
+					UART_send_buffer[7] = 0x0B;
+					UART_send_buffer[8] = 0x00;
+					UART_send_buffer[9] = 0x00;
+					UART_send_buffer[10] = 0x00;
+					UART_send_buffer[11] = 0x00;
+					frame_verify = UART_send_buffer[2] + UART_send_buffer[3] + UART_send_buffer[4] + UART_send_buffer[5] + \
+											   UART_send_buffer[6] + UART_send_buffer[7] + UART_send_buffer[8] + UART_send_buffer[9] + \
+												 UART_send_buffer[10];
+					UART_send_buffer[12] = frame_verify & 0xff;
+					UART_send_buffer[13] = 0x86;
+					
+					// send buffer
+					HAL_UART_Transmit_DMA(&huart1, (uint8_t *)&UART_send_buffer, 13);   //choose uart line
+					
+					if (xSemaphoreTake( exti_xSemaphore, 10000) == pdTRUE) {
+						time_origin = xTaskGetTickCount() * portTICK_RATE_MS;
+						FieldHandle = osThreadNew(field_task, NULL, &field_attributes);
+						xTaskCreate(field_task, "FIELD", configMINIMAL_STACK_SIZE * 4, NULL, FIELD_TASK_PRIO, &field_xHandle);
+					}
+					else {
+						//error message
+					}
+			}
+
 			return HAL_OK;
 
 		case 0x18:
+			if( FieldHandle != NULL ) {
+				osThreadTerminate( FieldHandle );
+			}
 			__HAL_TIM_SET_AUTORELOAD(&htim3, 1333 - 1);
 			__HAL_TIM_SET_COMPARE(&htim3, TIM_CHANNEL_1, 100 - 1);
 			HAL_TIM_PWM_Stop(&htim3, TIM_CHANNEL_1);
@@ -1022,9 +1927,50 @@ HAL_StatusTypeDef process_command (void)
 			HAL_GPIO_WritePin(GPIOA, GPIO_PIN_15, GPIO_PIN_SET);
 			HAL_GPIO_WritePin(GPIOE, GPIO_PIN_0| GPIO_PIN_3 |GPIO_PIN_4|GPIO_PIN_5, GPIO_PIN_SET);
 			HAL_GPIO_WritePin(GPIOE,  GPIO_PIN_1, GPIO_PIN_RESET);
+		
+			if (xSemaphoreTake( uart_A1_xSemaphore,10000) == pdTRUE) {
+					// hand shake
+					// fill buffer as in tab3B1
+					// function start: repeated code of hand shake sent tab3B1
+					UART_send_buffer[0] = 0xA6;
+					UART_send_buffer[1] = 0x0D;
+					UART_send_buffer[2] = 0xAA;
+					//https://zhidao.baidu.com/question/1638675882443131580.html?qbpn=2_2&tx=&word=%E4%BB%8E%E4%B8%80%E4%B8%AA16%E4%BD%8D%E5%8F%98%E9%87%8F%E4%B8%AD%E5%8F%96%E5%87%BA%E9%AB%988%E4%BD%8D%E5%92%8C%E4%BD%8E8%E4%BD%8D%EF%BC%8C%E6%B1%82C%E8%AF%AD%E8%A8%80%E7%A8%8B%E5%BA%8F%EF%BC%9F&fr=newsearchlist
+					code_verify = (UART_recv_buffer[3] + UART_recv_buffer[4]) * UART_recv_buffer[5];
+					UART_send_buffer[3] = code_verify & 0xff;
+					UART_send_buffer[4] = (code_verify >> 8) & 0xff;
+					UART_send_buffer[5] = (code_verify >> 16) & 0xff;
+					UART_send_buffer[6] = (code_verify >> 24) & 0xff;
+					UART_send_buffer[7] = 0x0B;
+					UART_send_buffer[8] = 0x00;
+					UART_send_buffer[9] = 0x00;
+					UART_send_buffer[10] = 0x00;
+					UART_send_buffer[11] = 0x00;
+					frame_verify = UART_send_buffer[2] + UART_send_buffer[3] + UART_send_buffer[4] + UART_send_buffer[5] + \
+											   UART_send_buffer[6] + UART_send_buffer[7] + UART_send_buffer[8] + UART_send_buffer[9] + \
+												 UART_send_buffer[10];
+					UART_send_buffer[12] = frame_verify & 0xff;
+					UART_send_buffer[13] = 0x86;
+					
+					// send buffer
+					HAL_UART_Transmit_DMA(&huart1, (uint8_t *)&UART_send_buffer, 13);   //choose uart line
+					
+					if (xSemaphoreTake( exti_xSemaphore, 10000) == pdTRUE) {
+						time_origin = xTaskGetTickCount() * portTICK_RATE_MS;
+						FieldHandle = osThreadNew(field_task, NULL, &field_attributes);
+						xTaskCreate(field_task, "FIELD", configMINIMAL_STACK_SIZE * 4, NULL, FIELD_TASK_PRIO, &field_xHandle);
+					}
+					else {
+						//error message
+					}
+			}
+
 			return HAL_OK;			
 
 		case 0x19:
+			if( FieldHandle != NULL ) {
+				osThreadTerminate( FieldHandle );
+			}
 			__HAL_TIM_SET_AUTORELOAD(&htim3, 1333 - 1);
 			__HAL_TIM_SET_COMPARE(&htim3, TIM_CHANNEL_1, 100 - 1);
 			HAL_TIM_PWM_Stop(&htim3, TIM_CHANNEL_1);
@@ -1034,9 +1980,50 @@ HAL_StatusTypeDef process_command (void)
 			HAL_GPIO_WritePin(GPIOA, GPIO_PIN_15, GPIO_PIN_SET);
 			HAL_GPIO_WritePin(GPIOE, GPIO_PIN_0| GPIO_PIN_3 |GPIO_PIN_4|GPIO_PIN_5, GPIO_PIN_SET);
 			HAL_GPIO_WritePin(GPIOE,  GPIO_PIN_1, GPIO_PIN_RESET);
+		
+			if (xSemaphoreTake( uart_A1_xSemaphore,10000) == pdTRUE) {
+					// hand shake
+					// fill buffer as in tab3B1
+					// function start: repeated code of hand shake sent tab3B1
+					UART_send_buffer[0] = 0xA6;
+					UART_send_buffer[1] = 0x0D;
+					UART_send_buffer[2] = 0xAA;
+					//https://zhidao.baidu.com/question/1638675882443131580.html?qbpn=2_2&tx=&word=%E4%BB%8E%E4%B8%80%E4%B8%AA16%E4%BD%8D%E5%8F%98%E9%87%8F%E4%B8%AD%E5%8F%96%E5%87%BA%E9%AB%988%E4%BD%8D%E5%92%8C%E4%BD%8E8%E4%BD%8D%EF%BC%8C%E6%B1%82C%E8%AF%AD%E8%A8%80%E7%A8%8B%E5%BA%8F%EF%BC%9F&fr=newsearchlist
+					code_verify = (UART_recv_buffer[3] + UART_recv_buffer[4]) * UART_recv_buffer[5];
+					UART_send_buffer[3] = code_verify & 0xff;
+					UART_send_buffer[4] = (code_verify >> 8) & 0xff;
+					UART_send_buffer[5] = (code_verify >> 16) & 0xff;
+					UART_send_buffer[6] = (code_verify >> 24) & 0xff;
+					UART_send_buffer[7] = 0x0B;
+					UART_send_buffer[8] = 0x00;
+					UART_send_buffer[9] = 0x00;
+					UART_send_buffer[10] = 0x00;
+					UART_send_buffer[11] = 0x00;
+					frame_verify = UART_send_buffer[2] + UART_send_buffer[3] + UART_send_buffer[4] + UART_send_buffer[5] + \
+											   UART_send_buffer[6] + UART_send_buffer[7] + UART_send_buffer[8] + UART_send_buffer[9] + \
+												 UART_send_buffer[10];
+					UART_send_buffer[12] = frame_verify & 0xff;
+					UART_send_buffer[13] = 0x86;
+					
+					// send buffer
+					HAL_UART_Transmit_DMA(&huart1, (uint8_t *)&UART_send_buffer, 13);   //choose uart line
+					
+					if (xSemaphoreTake( exti_xSemaphore, 10000) == pdTRUE) {
+						time_origin = xTaskGetTickCount() * portTICK_RATE_MS;
+						FieldHandle = osThreadNew(field_task, NULL, &field_attributes);
+						xTaskCreate(field_task, "FIELD", configMINIMAL_STACK_SIZE * 4, NULL, FIELD_TASK_PRIO, &field_xHandle);
+					}
+					else {
+						//error message
+					}
+			}
+
 			return HAL_OK;	
 		
 		case 0x1A:
+			if( FieldHandle != NULL ) {
+				osThreadTerminate( FieldHandle );
+			}
 			__HAL_TIM_SET_AUTORELOAD(&htim3, 1333 - 1);
 			__HAL_TIM_SET_COMPARE(&htim3, TIM_CHANNEL_1, 100 - 1);
 			HAL_TIM_PWM_Stop(&htim3, TIM_CHANNEL_1);
@@ -1046,9 +2033,50 @@ HAL_StatusTypeDef process_command (void)
 			HAL_GPIO_WritePin(GPIOA, GPIO_PIN_15, GPIO_PIN_SET);
 			HAL_GPIO_WritePin(GPIOE, GPIO_PIN_0 |GPIO_PIN_4|GPIO_PIN_5, GPIO_PIN_SET);
 			HAL_GPIO_WritePin(GPIOE,  GPIO_PIN_1| GPIO_PIN_3, GPIO_PIN_RESET);
+		
+			if (xSemaphoreTake( uart_A1_xSemaphore,10000) == pdTRUE) {
+					// hand shake
+					// fill buffer as in tab3B1
+					// function start: repeated code of hand shake sent tab3B1
+					UART_send_buffer[0] = 0xA6;
+					UART_send_buffer[1] = 0x0D;
+					UART_send_buffer[2] = 0xAA;
+					//https://zhidao.baidu.com/question/1638675882443131580.html?qbpn=2_2&tx=&word=%E4%BB%8E%E4%B8%80%E4%B8%AA16%E4%BD%8D%E5%8F%98%E9%87%8F%E4%B8%AD%E5%8F%96%E5%87%BA%E9%AB%988%E4%BD%8D%E5%92%8C%E4%BD%8E8%E4%BD%8D%EF%BC%8C%E6%B1%82C%E8%AF%AD%E8%A8%80%E7%A8%8B%E5%BA%8F%EF%BC%9F&fr=newsearchlist
+					code_verify = (UART_recv_buffer[3] + UART_recv_buffer[4]) * UART_recv_buffer[5];
+					UART_send_buffer[3] = code_verify & 0xff;
+					UART_send_buffer[4] = (code_verify >> 8) & 0xff;
+					UART_send_buffer[5] = (code_verify >> 16) & 0xff;
+					UART_send_buffer[6] = (code_verify >> 24) & 0xff;
+					UART_send_buffer[7] = 0x0B;
+					UART_send_buffer[8] = 0x00;
+					UART_send_buffer[9] = 0x00;
+					UART_send_buffer[10] = 0x00;
+					UART_send_buffer[11] = 0x00;
+					frame_verify = UART_send_buffer[2] + UART_send_buffer[3] + UART_send_buffer[4] + UART_send_buffer[5] + \
+											   UART_send_buffer[6] + UART_send_buffer[7] + UART_send_buffer[8] + UART_send_buffer[9] + \
+												 UART_send_buffer[10];
+					UART_send_buffer[12] = frame_verify & 0xff;
+					UART_send_buffer[13] = 0x86;
+					
+					// send buffer
+					HAL_UART_Transmit_DMA(&huart1, (uint8_t *)&UART_send_buffer, 13);   //choose uart line
+					
+					if (xSemaphoreTake( exti_xSemaphore, 10000) == pdTRUE) {
+						time_origin = xTaskGetTickCount() * portTICK_RATE_MS;
+						FieldHandle = osThreadNew(field_task, NULL, &field_attributes);
+						xTaskCreate(field_task, "FIELD", configMINIMAL_STACK_SIZE * 4, NULL, FIELD_TASK_PRIO, &field_xHandle);
+					}
+					else {
+						//error message
+					}
+			}
+
 			return HAL_OK;
 
 		case 0x1B:
+			if( FieldHandle != NULL ) {
+				osThreadTerminate( FieldHandle );
+			}
 			__HAL_TIM_SET_AUTORELOAD(&htim3, 1333 - 1);
 			__HAL_TIM_SET_COMPARE(&htim3, TIM_CHANNEL_1, 100 - 1);
 			HAL_TIM_PWM_Stop(&htim3, TIM_CHANNEL_1);
@@ -1058,9 +2086,50 @@ HAL_StatusTypeDef process_command (void)
 			HAL_GPIO_WritePin(GPIOA, GPIO_PIN_15, GPIO_PIN_SET);
 			HAL_GPIO_WritePin(GPIOE, GPIO_PIN_0| GPIO_PIN_3 |GPIO_PIN_4|GPIO_PIN_5, GPIO_PIN_SET);
 			HAL_GPIO_WritePin(GPIOE,  GPIO_PIN_1, GPIO_PIN_RESET);
+		
+			if (xSemaphoreTake( uart_A1_xSemaphore,10000) == pdTRUE) {
+					// hand shake
+					// fill buffer as in tab3B1
+					// function start: repeated code of hand shake sent tab3B1
+					UART_send_buffer[0] = 0xA6;
+					UART_send_buffer[1] = 0x0D;
+					UART_send_buffer[2] = 0xAA;
+					//https://zhidao.baidu.com/question/1638675882443131580.html?qbpn=2_2&tx=&word=%E4%BB%8E%E4%B8%80%E4%B8%AA16%E4%BD%8D%E5%8F%98%E9%87%8F%E4%B8%AD%E5%8F%96%E5%87%BA%E9%AB%988%E4%BD%8D%E5%92%8C%E4%BD%8E8%E4%BD%8D%EF%BC%8C%E6%B1%82C%E8%AF%AD%E8%A8%80%E7%A8%8B%E5%BA%8F%EF%BC%9F&fr=newsearchlist
+					code_verify = (UART_recv_buffer[3] + UART_recv_buffer[4]) * UART_recv_buffer[5];
+					UART_send_buffer[3] = code_verify & 0xff;
+					UART_send_buffer[4] = (code_verify >> 8) & 0xff;
+					UART_send_buffer[5] = (code_verify >> 16) & 0xff;
+					UART_send_buffer[6] = (code_verify >> 24) & 0xff;
+					UART_send_buffer[7] = 0x0B;
+					UART_send_buffer[8] = 0x00;
+					UART_send_buffer[9] = 0x00;
+					UART_send_buffer[10] = 0x00;
+					UART_send_buffer[11] = 0x00;
+					frame_verify = UART_send_buffer[2] + UART_send_buffer[3] + UART_send_buffer[4] + UART_send_buffer[5] + \
+											   UART_send_buffer[6] + UART_send_buffer[7] + UART_send_buffer[8] + UART_send_buffer[9] + \
+												 UART_send_buffer[10];
+					UART_send_buffer[12] = frame_verify & 0xff;
+					UART_send_buffer[13] = 0x86;
+					
+					// send buffer
+					HAL_UART_Transmit_DMA(&huart1, (uint8_t *)&UART_send_buffer, 13);   //choose uart line
+					
+					if (xSemaphoreTake( exti_xSemaphore, 10000) == pdTRUE) {
+						time_origin = xTaskGetTickCount() * portTICK_RATE_MS;
+						FieldHandle = osThreadNew(field_task, NULL, &field_attributes);
+						xTaskCreate(field_task, "FIELD", configMINIMAL_STACK_SIZE * 4, NULL, FIELD_TASK_PRIO, &field_xHandle);
+					}
+					else {
+						//error message
+					}
+			}
+
 			return HAL_OK;
 	
 		case 0x1D:
+			if( FieldHandle != NULL ) {
+				osThreadTerminate( FieldHandle );
+			}
 			__HAL_TIM_SET_AUTORELOAD(&htim3, 1400 - 1);
 			__HAL_TIM_SET_COMPARE(&htim3, TIM_CHANNEL_1, 100 - 1);
 			HAL_TIM_PWM_Stop(&htim3, TIM_CHANNEL_1);
@@ -1071,11 +2140,49 @@ HAL_StatusTypeDef process_command (void)
 			HAL_GPIO_WritePin(GPIOE, GPIO_PIN_0 |GPIO_PIN_4|GPIO_PIN_5, GPIO_PIN_SET);
 			HAL_GPIO_WritePin(GPIOE,  GPIO_PIN_1| GPIO_PIN_3, GPIO_PIN_RESET);
 		
-//			HAL_TIM_OC_Start_IT(&htim3, TIM_CHANNEL_1);
-		//varied frequency, same as 0x1F
+			if (xSemaphoreTake( uart_A1_xSemaphore,10000) == pdTRUE) {
+					// hand shake
+					// fill buffer as in tab3B1
+					// function start: repeated code of hand shake sent tab3B1
+					UART_send_buffer[0] = 0xA6;
+					UART_send_buffer[1] = 0x0D;
+					UART_send_buffer[2] = 0xAA;
+					//https://zhidao.baidu.com/question/1638675882443131580.html?qbpn=2_2&tx=&word=%E4%BB%8E%E4%B8%80%E4%B8%AA16%E4%BD%8D%E5%8F%98%E9%87%8F%E4%B8%AD%E5%8F%96%E5%87%BA%E9%AB%988%E4%BD%8D%E5%92%8C%E4%BD%8E8%E4%BD%8D%EF%BC%8C%E6%B1%82C%E8%AF%AD%E8%A8%80%E7%A8%8B%E5%BA%8F%EF%BC%9F&fr=newsearchlist
+					code_verify = (UART_recv_buffer[3] + UART_recv_buffer[4]) * UART_recv_buffer[5];
+					UART_send_buffer[3] = code_verify & 0xff;
+					UART_send_buffer[4] = (code_verify >> 8) & 0xff;
+					UART_send_buffer[5] = (code_verify >> 16) & 0xff;
+					UART_send_buffer[6] = (code_verify >> 24) & 0xff;
+					UART_send_buffer[7] = 0x0B;
+					UART_send_buffer[8] = 0x00;
+					UART_send_buffer[9] = 0x00;
+					UART_send_buffer[10] = 0x00;
+					UART_send_buffer[11] = 0x00;
+					frame_verify = UART_send_buffer[2] + UART_send_buffer[3] + UART_send_buffer[4] + UART_send_buffer[5] + \
+											   UART_send_buffer[6] + UART_send_buffer[7] + UART_send_buffer[8] + UART_send_buffer[9] + \
+												 UART_send_buffer[10];
+					UART_send_buffer[12] = frame_verify & 0xff;
+					UART_send_buffer[13] = 0x86;
+					
+					// send buffer
+					HAL_UART_Transmit_DMA(&huart1, (uint8_t *)&UART_send_buffer, 13);   //choose uart line
+					
+					if (xSemaphoreTake( exti_xSemaphore, 10000) == pdTRUE) {
+						time_origin = xTaskGetTickCount() * portTICK_RATE_MS;
+						FieldHandle = osThreadNew(field_task, NULL, &field_attributes);
+						xTaskCreate(field_task, "FIELD", configMINIMAL_STACK_SIZE * 4, NULL, FIELD_TASK_PRIO, &field_xHandle);
+					}
+					else {
+						//error message
+					}
+			}
+
 			return HAL_OK;
 
 		case 0x1F:
+			if( FieldHandle != NULL ) {
+				osThreadTerminate( FieldHandle );
+			}
 			__HAL_TIM_SET_AUTORELOAD(&htim3, 1400 - 1);
 			__HAL_TIM_SET_COMPARE(&htim3, TIM_CHANNEL_1, 100 - 1);
 			HAL_TIM_PWM_Stop(&htim3, TIM_CHANNEL_1);
@@ -1085,10 +2192,51 @@ HAL_StatusTypeDef process_command (void)
 			HAL_GPIO_WritePin(GPIOA, GPIO_PIN_15, GPIO_PIN_SET);
 			HAL_GPIO_WritePin(GPIOE, GPIO_PIN_0| GPIO_PIN_3 |GPIO_PIN_4|GPIO_PIN_5, GPIO_PIN_SET);
 			HAL_GPIO_WritePin(GPIOE,  GPIO_PIN_1, GPIO_PIN_RESET);
+		
+			if (xSemaphoreTake( uart_A1_xSemaphore,10000) == pdTRUE) {
+					// hand shake
+					// fill buffer as in tab3B1
+					// function start: repeated code of hand shake sent tab3B1
+					UART_send_buffer[0] = 0xA6;
+					UART_send_buffer[1] = 0x0D;
+					UART_send_buffer[2] = 0xAA;
+					//https://zhidao.baidu.com/question/1638675882443131580.html?qbpn=2_2&tx=&word=%E4%BB%8E%E4%B8%80%E4%B8%AA16%E4%BD%8D%E5%8F%98%E9%87%8F%E4%B8%AD%E5%8F%96%E5%87%BA%E9%AB%988%E4%BD%8D%E5%92%8C%E4%BD%8E8%E4%BD%8D%EF%BC%8C%E6%B1%82C%E8%AF%AD%E8%A8%80%E7%A8%8B%E5%BA%8F%EF%BC%9F&fr=newsearchlist
+					code_verify = (UART_recv_buffer[3] + UART_recv_buffer[4]) * UART_recv_buffer[5];
+					UART_send_buffer[3] = code_verify & 0xff;
+					UART_send_buffer[4] = (code_verify >> 8) & 0xff;
+					UART_send_buffer[5] = (code_verify >> 16) & 0xff;
+					UART_send_buffer[6] = (code_verify >> 24) & 0xff;
+					UART_send_buffer[7] = 0x0B;
+					UART_send_buffer[8] = 0x00;
+					UART_send_buffer[9] = 0x00;
+					UART_send_buffer[10] = 0x00;
+					UART_send_buffer[11] = 0x00;
+					frame_verify = UART_send_buffer[2] + UART_send_buffer[3] + UART_send_buffer[4] + UART_send_buffer[5] + \
+											   UART_send_buffer[6] + UART_send_buffer[7] + UART_send_buffer[8] + UART_send_buffer[9] + \
+												 UART_send_buffer[10];
+					UART_send_buffer[12] = frame_verify & 0xff;
+					UART_send_buffer[13] = 0x86;
+					
+					// send buffer
+					HAL_UART_Transmit_DMA(&huart1, (uint8_t *)&UART_send_buffer, 13);   //choose uart line
+					
+					if (xSemaphoreTake( exti_xSemaphore, 10000) == pdTRUE) {
+						time_origin = xTaskGetTickCount() * portTICK_RATE_MS;
+						FieldHandle = osThreadNew(field_task, NULL, &field_attributes);
+						xTaskCreate(field_task, "FIELD", configMINIMAL_STACK_SIZE * 4, NULL, FIELD_TASK_PRIO, &field_xHandle);
+					}
+					else {
+						//error message
+					}
+			}
+
 			return HAL_OK;
 
 		case 0x20:
-			__HAL_TIM_SET_AUTORELOAD(&htim3, 1333 - 1);
+			if( FieldHandle != NULL ) {
+				osThreadTerminate( FieldHandle );
+			}
+//			__HAL_TIM_SET_AUTORELOAD(&htim3, 1333 - 1);
 			__HAL_TIM_SET_COMPARE(&htim3, TIM_CHANNEL_1, 0);
 			HAL_TIM_PWM_Stop(&htim3, TIM_CHANNEL_1);
 	//				pwm_count = 0;
@@ -1097,10 +2245,51 @@ HAL_StatusTypeDef process_command (void)
 			HAL_GPIO_WritePin(GPIOA, GPIO_PIN_15, GPIO_PIN_SET);
 			HAL_GPIO_WritePin(GPIOE,  GPIO_PIN_1|GPIO_PIN_3 , GPIO_PIN_SET);
 			HAL_GPIO_WritePin(GPIOE, GPIO_PIN_0|GPIO_PIN_4|GPIO_PIN_5 , GPIO_PIN_RESET);
+		
+			if (xSemaphoreTake( uart_A1_xSemaphore,10000) == pdTRUE) {
+					// hand shake
+					// fill buffer as in tab3B1
+					// function start: repeated code of hand shake sent tab3B1
+					UART_send_buffer[0] = 0xA6;
+					UART_send_buffer[1] = 0x0D;
+					UART_send_buffer[2] = 0xAA;
+					//https://zhidao.baidu.com/question/1638675882443131580.html?qbpn=2_2&tx=&word=%E4%BB%8E%E4%B8%80%E4%B8%AA16%E4%BD%8D%E5%8F%98%E9%87%8F%E4%B8%AD%E5%8F%96%E5%87%BA%E9%AB%988%E4%BD%8D%E5%92%8C%E4%BD%8E8%E4%BD%8D%EF%BC%8C%E6%B1%82C%E8%AF%AD%E8%A8%80%E7%A8%8B%E5%BA%8F%EF%BC%9F&fr=newsearchlist
+					code_verify = (UART_recv_buffer[3] + UART_recv_buffer[4]) * UART_recv_buffer[5];
+					UART_send_buffer[3] = code_verify & 0xff;
+					UART_send_buffer[4] = (code_verify >> 8) & 0xff;
+					UART_send_buffer[5] = (code_verify >> 16) & 0xff;
+					UART_send_buffer[6] = (code_verify >> 24) & 0xff;
+					UART_send_buffer[7] = 0x0B;
+					UART_send_buffer[8] = 0x00;
+					UART_send_buffer[9] = 0x00;
+					UART_send_buffer[10] = 0x00;
+					UART_send_buffer[11] = 0x00;
+					frame_verify = UART_send_buffer[2] + UART_send_buffer[3] + UART_send_buffer[4] + UART_send_buffer[5] + \
+											   UART_send_buffer[6] + UART_send_buffer[7] + UART_send_buffer[8] + UART_send_buffer[9] + \
+												 UART_send_buffer[10];
+					UART_send_buffer[12] = frame_verify & 0xff;
+					UART_send_buffer[13] = 0x86;
+					
+					// send buffer
+					HAL_UART_Transmit_DMA(&huart1, (uint8_t *)&UART_send_buffer, 13);   //choose uart line
+					
+					if (xSemaphoreTake( exti_xSemaphore, 10000) == pdTRUE) {
+						time_origin = xTaskGetTickCount() * portTICK_RATE_MS;
+						FieldHandle = osThreadNew(field_task, NULL, &field_attributes);
+//						xTaskCreate(field_task, "FIELD", configMINIMAL_STACK_SIZE * 4, NULL, FIELD_TASK_PRIO, &field_xHandle);
+					}
+					else {
+						//error message
+					}
+			}
+
 			return HAL_OK;	
 
 		case 0x21:
-			__HAL_TIM_SET_AUTORELOAD(&htim3, 1333 - 1);
+			if( FieldHandle != NULL ) {
+				osThreadTerminate( FieldHandle );
+			}
+//			__HAL_TIM_SET_AUTORELOAD(&htim3, 1333 - 1);
 			__HAL_TIM_SET_COMPARE(&htim3, TIM_CHANNEL_1, 0);
 			HAL_TIM_PWM_Stop(&htim3, TIM_CHANNEL_1);
 	//				pwm_count = 0;
@@ -1109,9 +2298,50 @@ HAL_StatusTypeDef process_command (void)
 			HAL_GPIO_WritePin(GPIOA, GPIO_PIN_15, GPIO_PIN_SET);
 			HAL_GPIO_WritePin(GPIOE, GPIO_PIN_0|GPIO_PIN_3 |GPIO_PIN_4|GPIO_PIN_5 , GPIO_PIN_SET);
 			HAL_GPIO_WritePin(GPIOE, GPIO_PIN_1 , GPIO_PIN_RESET);
+		
+			if (xSemaphoreTake( uart_A1_xSemaphore,10000) == pdTRUE) {
+					// hand shake
+					// fill buffer as in tab3B1
+					// function start: repeated code of hand shake sent tab3B1
+					UART_send_buffer[0] = 0xA6;
+					UART_send_buffer[1] = 0x0D;
+					UART_send_buffer[2] = 0xAA;
+					//https://zhidao.baidu.com/question/1638675882443131580.html?qbpn=2_2&tx=&word=%E4%BB%8E%E4%B8%80%E4%B8%AA16%E4%BD%8D%E5%8F%98%E9%87%8F%E4%B8%AD%E5%8F%96%E5%87%BA%E9%AB%988%E4%BD%8D%E5%92%8C%E4%BD%8E8%E4%BD%8D%EF%BC%8C%E6%B1%82C%E8%AF%AD%E8%A8%80%E7%A8%8B%E5%BA%8F%EF%BC%9F&fr=newsearchlist
+					code_verify = (UART_recv_buffer[3] + UART_recv_buffer[4]) * UART_recv_buffer[5];
+					UART_send_buffer[3] = code_verify & 0xff;
+					UART_send_buffer[4] = (code_verify >> 8) & 0xff;
+					UART_send_buffer[5] = (code_verify >> 16) & 0xff;
+					UART_send_buffer[6] = (code_verify >> 24) & 0xff;
+					UART_send_buffer[7] = 0x0B;
+					UART_send_buffer[8] = 0x00;
+					UART_send_buffer[9] = 0x00;
+					UART_send_buffer[10] = 0x00;
+					UART_send_buffer[11] = 0x00;
+					frame_verify = UART_send_buffer[2] + UART_send_buffer[3] + UART_send_buffer[4] + UART_send_buffer[5] + \
+											   UART_send_buffer[6] + UART_send_buffer[7] + UART_send_buffer[8] + UART_send_buffer[9] + \
+												 UART_send_buffer[10];
+					UART_send_buffer[12] = frame_verify & 0xff;
+					UART_send_buffer[13] = 0x86;
+					
+					// send buffer
+					HAL_UART_Transmit_DMA(&huart1, (uint8_t *)&UART_send_buffer, 13);   //choose uart line
+					
+					if (xSemaphoreTake( exti_xSemaphore, 10000) == pdTRUE) {
+						time_origin = xTaskGetTickCount() * portTICK_RATE_MS;
+						FieldHandle = osThreadNew(field_task, NULL, &field_attributes);
+//						xTaskCreate(field_task, "FIELD", configMINIMAL_STACK_SIZE * 4, NULL, FIELD_TASK_PRIO, &field_xHandle);
+					}
+					else {
+						//error message
+					}
+			}
+
 			return HAL_OK;		
 		
 		case 0x22:
+			if( FieldHandle != NULL ) {
+				osThreadTerminate( FieldHandle );
+			}
 			__HAL_TIM_SET_AUTORELOAD(&htim3, 1333 - 1);
 			__HAL_TIM_SET_COMPARE(&htim3, TIM_CHANNEL_1, 100 - 1);
 			HAL_TIM_PWM_Stop(&htim3, TIM_CHANNEL_1);
@@ -1121,22 +2351,91 @@ HAL_StatusTypeDef process_command (void)
 			HAL_GPIO_WritePin(GPIOA, GPIO_PIN_15, GPIO_PIN_SET);
 			HAL_GPIO_WritePin(GPIOE, GPIO_PIN_1 |GPIO_PIN_3, GPIO_PIN_SET);
 			HAL_GPIO_WritePin(GPIOE,GPIO_PIN_0 |GPIO_PIN_4|GPIO_PIN_5  , GPIO_PIN_RESET);
+		
+			if (xSemaphoreTake( uart_A1_xSemaphore,10000) == pdTRUE) {
+					// hand shake
+					// fill buffer as in tab3B1
+					// function start: repeated code of hand shake sent tab3B1
+					UART_send_buffer[0] = 0xA6;
+					UART_send_buffer[1] = 0x0D;
+					UART_send_buffer[2] = 0xAA;
+					//https://zhidao.baidu.com/question/1638675882443131580.html?qbpn=2_2&tx=&word=%E4%BB%8E%E4%B8%80%E4%B8%AA16%E4%BD%8D%E5%8F%98%E9%87%8F%E4%B8%AD%E5%8F%96%E5%87%BA%E9%AB%988%E4%BD%8D%E5%92%8C%E4%BD%8E8%E4%BD%8D%EF%BC%8C%E6%B1%82C%E8%AF%AD%E8%A8%80%E7%A8%8B%E5%BA%8F%EF%BC%9F&fr=newsearchlist
+					code_verify = (UART_recv_buffer[3] + UART_recv_buffer[4]) * UART_recv_buffer[5];
+					UART_send_buffer[3] = code_verify & 0xff;
+					UART_send_buffer[4] = (code_verify >> 8) & 0xff;
+					UART_send_buffer[5] = (code_verify >> 16) & 0xff;
+					UART_send_buffer[6] = (code_verify >> 24) & 0xff;
+					UART_send_buffer[7] = 0x0B;
+					UART_send_buffer[8] = 0x00;
+					UART_send_buffer[9] = 0x00;
+					UART_send_buffer[10] = 0x00;
+					UART_send_buffer[11] = 0x00;
+					frame_verify = UART_send_buffer[2] + UART_send_buffer[3] + UART_send_buffer[4] + UART_send_buffer[5] + \
+											   UART_send_buffer[6] + UART_send_buffer[7] + UART_send_buffer[8] + UART_send_buffer[9] + \
+												 UART_send_buffer[10];
+					UART_send_buffer[12] = frame_verify & 0xff;
+					UART_send_buffer[13] = 0x86;
+					
+					// send buffer
+					HAL_UART_Transmit_DMA(&huart1, (uint8_t *)&UART_send_buffer, 13);   //choose uart line
+					
+					if (xSemaphoreTake( exti_xSemaphore, 10000) == pdTRUE) {
+						time_origin = xTaskGetTickCount() * portTICK_RATE_MS;
+						FieldHandle = osThreadNew(field_task, NULL, &field_attributes);
+//						xTaskCreate(field_task, "FIELD", configMINIMAL_STACK_SIZE * 4, NULL, FIELD_TASK_PRIO, &field_xHandle);
+					}
+					else {
+						//error message
+					}
+			}
+
 			return HAL_OK;
 
 		case 0x23:
-			__HAL_TIM_SET_AUTORELOAD(&htim3, 1333 - 1);
-			__HAL_TIM_SET_COMPARE(&htim3, TIM_CHANNEL_1, 100 - 1);
-			HAL_TIM_PWM_Stop(&htim3, TIM_CHANNEL_1);
-	//				pwm_count = 0;
+			if (xSemaphoreTake( uart_A1_xSemaphore,10000) == pdTRUE) {
+					// hand shake
+					// fill buffer as in tab3B1
+					// function start: repeated code of hand shake sent tab3B1
+					UART_send_buffer[0] = 0xA6;
+					UART_send_buffer[1] = 0x0D;
+					UART_send_buffer[2] = 0xAA;
+					//https://zhidao.baidu.com/question/1638675882443131580.html?qbpn=2_2&tx=&word=%E4%BB%8E%E4%B8%80%E4%B8%AA16%E4%BD%8D%E5%8F%98%E9%87%8F%E4%B8%AD%E5%8F%96%E5%87%BA%E9%AB%988%E4%BD%8D%E5%92%8C%E4%BD%8E8%E4%BD%8D%EF%BC%8C%E6%B1%82C%E8%AF%AD%E8%A8%80%E7%A8%8B%E5%BA%8F%EF%BC%9F&fr=newsearchlist
+					code_verify = (UART_recv_buffer[3] + UART_recv_buffer[4]) * UART_recv_buffer[5];
+					UART_send_buffer[3] = code_verify & 0xff;
+					UART_send_buffer[4] = (code_verify >> 8) & 0xff;
+					UART_send_buffer[5] = (code_verify >> 16) & 0xff;
+					UART_send_buffer[6] = (code_verify >> 24) & 0xff;
+					UART_send_buffer[7] = 0x0B;
+					UART_send_buffer[8] = 0x00;
+					UART_send_buffer[9] = 0x00;
+					UART_send_buffer[10] = 0x00;
+					UART_send_buffer[11] = 0x00;
+					frame_verify = UART_send_buffer[2] + UART_send_buffer[3] + UART_send_buffer[4] + UART_send_buffer[5] + \
+											   UART_send_buffer[6] + UART_send_buffer[7] + UART_send_buffer[8] + UART_send_buffer[9] + \
+												 UART_send_buffer[10];
+					UART_send_buffer[12] = frame_verify & 0xff;
+					UART_send_buffer[13] = 0x86;
+					
+					// send buffer
+					HAL_UART_Transmit_DMA(&huart1, (uint8_t *)&UART_send_buffer, 13);   //choose uart line
+					
+					if (xSemaphoreTake( exti_xSemaphore, 10000) == pdTRUE) {
+						time_origin = xTaskGetTickCount() * portTICK_RATE_MS;
+						FieldHandle = osThreadNew(field_task, NULL, &field_attributes);
+//						xTaskCreate(field_task, "FIELD", configMINIMAL_STACK_SIZE * 4, NULL, FIELD_TASK_PRIO, &field_xHandle);
+					}
+					else {
+						//error message
+					}
+			}
 
-		//config DO6/7/9/10/11/12
-			HAL_GPIO_WritePin(GPIOA, GPIO_PIN_15, GPIO_PIN_SET);
-			HAL_GPIO_WritePin(GPIOE, GPIO_PIN_0|GPIO_PIN_3 |GPIO_PIN_4|GPIO_PIN_5 , GPIO_PIN_SET);
-			HAL_GPIO_WritePin(GPIOE, GPIO_PIN_1 , GPIO_PIN_RESET);
 			return HAL_OK;
 
 		case 0x24:
-			__HAL_TIM_SET_AUTORELOAD(&htim3, 1333 - 1);
+			if( FieldHandle != NULL ) {
+				osThreadTerminate( FieldHandle );
+			}
+//			__HAL_TIM_SET_AUTORELOAD(&htim3, 1333 - 1);
 			__HAL_TIM_SET_COMPARE(&htim3, TIM_CHANNEL_1, 0);
 			HAL_TIM_PWM_Stop(&htim3, TIM_CHANNEL_1);
 	//				pwm_count = 0;
@@ -1145,6 +2444,44 @@ HAL_StatusTypeDef process_command (void)
 			HAL_GPIO_WritePin(GPIOA, GPIO_PIN_15, GPIO_PIN_SET);
 			HAL_GPIO_WritePin(GPIOE, GPIO_PIN_1|GPIO_PIN_5 , GPIO_PIN_SET);
 			HAL_GPIO_WritePin(GPIOE, GPIO_PIN_0|GPIO_PIN_3 |GPIO_PIN_4 , GPIO_PIN_RESET);
+		
+			if (xSemaphoreTake( uart_A1_xSemaphore,10000) == pdTRUE) {
+					// hand shake
+					// fill buffer as in tab3B1
+					// function start: repeated code of hand shake sent tab3B1
+					UART_send_buffer[0] = 0xA6;
+					UART_send_buffer[1] = 0x0D;
+					UART_send_buffer[2] = 0xAA;
+					//https://zhidao.baidu.com/question/1638675882443131580.html?qbpn=2_2&tx=&word=%E4%BB%8E%E4%B8%80%E4%B8%AA16%E4%BD%8D%E5%8F%98%E9%87%8F%E4%B8%AD%E5%8F%96%E5%87%BA%E9%AB%988%E4%BD%8D%E5%92%8C%E4%BD%8E8%E4%BD%8D%EF%BC%8C%E6%B1%82C%E8%AF%AD%E8%A8%80%E7%A8%8B%E5%BA%8F%EF%BC%9F&fr=newsearchlist
+					code_verify = (UART_recv_buffer[3] + UART_recv_buffer[4]) * UART_recv_buffer[5];
+					UART_send_buffer[3] = code_verify & 0xff;
+					UART_send_buffer[4] = (code_verify >> 8) & 0xff;
+					UART_send_buffer[5] = (code_verify >> 16) & 0xff;
+					UART_send_buffer[6] = (code_verify >> 24) & 0xff;
+					UART_send_buffer[7] = 0x0B;
+					UART_send_buffer[8] = 0x00;
+					UART_send_buffer[9] = 0x00;
+					UART_send_buffer[10] = 0x00;
+					UART_send_buffer[11] = 0x00;
+					frame_verify = UART_send_buffer[2] + UART_send_buffer[3] + UART_send_buffer[4] + UART_send_buffer[5] + \
+											   UART_send_buffer[6] + UART_send_buffer[7] + UART_send_buffer[8] + UART_send_buffer[9] + \
+												 UART_send_buffer[10];
+					UART_send_buffer[12] = frame_verify & 0xff;
+					UART_send_buffer[13] = 0x86;
+					
+					// send buffer
+					HAL_UART_Transmit_DMA(&huart1, (uint8_t *)&UART_send_buffer, 13);   //choose uart line
+					
+					if (xSemaphoreTake( exti_xSemaphore, 10000) == pdTRUE) {
+						time_origin = xTaskGetTickCount() * portTICK_RATE_MS;
+						FieldHandle = osThreadNew(field_task, NULL, &field_attributes);
+//						xTaskCreate(field_task, "FIELD", configMINIMAL_STACK_SIZE * 4, NULL, FIELD_TASK_PRIO, &field_xHandle);
+					}
+					else {
+						//error message
+					}
+			}
+
 			return HAL_OK;
 		
 		default:
@@ -1482,7 +2819,7 @@ void field_task(void *argument){
 			}
 			UART_field_buffer[11] = 0x00;
 			UART_field_buffer[12] = 2;
-			UART_field_buffer[13] = 0x01;
+			UART_field_buffer[13] = 0x00;
 			frame_verify = UART_field_buffer[2] + UART_field_buffer[3] + UART_field_buffer[4] + UART_field_buffer[5] + \
 										 UART_field_buffer[6] + UART_field_buffer[7] + UART_field_buffer[8] + UART_field_buffer[9] + \
 										 UART_field_buffer[10] + UART_field_buffer[11] + UART_field_buffer[12] + UART_field_buffer[13];
@@ -1739,7 +3076,7 @@ void field_task(void *argument){
 			}
 			UART_field_buffer[11] = 0x00;
 			UART_field_buffer[12] = 2;
-			UART_field_buffer[13] = 0x00;
+			UART_field_buffer[13] = 0x01;
 			frame_verify = UART_field_buffer[2] + UART_field_buffer[3] + UART_field_buffer[4] + UART_field_buffer[5] + \
 										 UART_field_buffer[6] + UART_field_buffer[7] + UART_field_buffer[8] + UART_field_buffer[9] + \
 										 UART_field_buffer[10] + UART_field_buffer[11] + UART_field_buffer[12] + UART_field_buffer[13];
